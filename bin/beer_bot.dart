@@ -11,7 +11,7 @@ Pattern CMD_PREFIX = '!';
 String BOT_TOKEN = Platform.environment['DISCORD_TOKEN'];
 Stopwatch ELAPSED_SINCE_UPDATE;
 List<BeerList> BEER_SALES = <BeerList>[];
-int FOUR_HOURS = 14400000;
+int REFRESH_THRESHOLD = 14400000;
 
 void main(List<String> arguments) {
   print('Hello world!');
@@ -147,7 +147,7 @@ Future<void> oel(CommandContext ctx) async {
 
 Future requestBeer() async {
   //Only update list if older than 4 hours or empty
-  if (ELAPSED_SINCE_UPDATE.elapsedMilliseconds > FOUR_HOURS ||
+  if (ELAPSED_SINCE_UPDATE.elapsedMilliseconds > REFRESH_THRESHOLD ||
       BEER_SALES.isEmpty) {
     print('Updating beer releases and beers...');
     final list = await fetchBeerList();
@@ -155,6 +155,13 @@ Future requestBeer() async {
       BEER_SALES.add(BeerList.fromJson(item));
     }
     ELAPSED_SINCE_UPDATE.reset();
+  } else {
+    print('No update needed, requires update in ' +
+        ((REFRESH_THRESHOLD - ELAPSED_SINCE_UPDATE.elapsedMilliseconds) *
+                1000 *
+                60)
+            .toString() +
+        ' minutes.');
   }
 }
 
@@ -166,6 +173,6 @@ Future<Map<String, dynamic>> fetchBeerList() async {
     Map<String, dynamic> res = json.decode(response.body);
     return res;
   } else {
-    throw Exception('Error fetching album');
+    throw Exception('Error fetching beer information');
   }
 }
