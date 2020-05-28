@@ -1,14 +1,14 @@
 import 'dart:async';
-import 'dart:math';
 import 'package:nyxx/Vm.dart';
 import 'package:nyxx/nyxx.dart';
 import 'package:nyxx/commands.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:io';
+import 'beerlist.dart';
 
 Pattern CMD_PREFIX = '!';
-String BOT_TOKEN =
-    'NzE1MjQyNzgzNTEzNzcyMDcy.Xs6Z1g.IxbUPVkorbkrmu2wDi4LTtaQe0M';
+String BOT_TOKEN = Platform.environment['DISCORD_TOKEN'];
 Stopwatch ELAPSED_SINCE_UPDATE;
 List<BeerList> BEER_SALES = <BeerList>[];
 int FOUR_HOURS = 14400000;
@@ -167,69 +167,5 @@ Future<Map<String, dynamic>> fetchBeerList() async {
     return res;
   } else {
     throw Exception('Error fetching album');
-  }
-}
-
-class BeerList {
-  final String saleDate;
-  final List<Beer> beerList;
-
-  BeerList(this.saleDate, this.beerList);
-  BeerList.fromJson(Map<String, dynamic> json)
-      : saleDate = json['first_sale'],
-        beerList = createListFromMap(json['items']);
-
-  static List<Beer> createListFromMap(List<dynamic> json) {
-    var toReturn = <Beer>[];
-    for (var item in json) {
-      toReturn.add(Beer.fromJson(item));
-    }
-    return toReturn;
-  }
-}
-
-class Beer {
-  final int id;
-  final int sysid;
-  final String name;
-  final String alcohol_vol;
-  final String price;
-  final String producer;
-  final String country;
-  final int latest;
-  final int yesterday;
-  final String trend;
-  final int score;
-
-  Beer(
-      this.id,
-      this.sysid,
-      this.name,
-      this.alcohol_vol,
-      this.price,
-      this.producer,
-      this.country,
-      this.latest,
-      this.yesterday,
-      this.trend,
-      this.score);
-  Beer.fromJson(Map<String, dynamic> json)
-      : id = json['id'],
-        sysid = json['sysid'],
-        name = json['name'],
-        alcohol_vol = json['alcohol_vol'],
-        price = json['price'],
-        producer = json['producer'],
-        country = json['country'],
-        latest = json['latest'],
-        yesterday = json['yesterday'],
-        trend = json['trend'],
-        score = Random().nextInt(100);
-
-  String buildBeerMessage() {
-    var message;
-    var title = MessageDecoration.underline.create(
-        MessageDecoration.bold.create(name + ' ' + alcohol_vol + '%\n'));
-    return title;
   }
 }
