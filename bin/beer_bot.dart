@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 import 'package:nyxx/nyxx.dart';
 import 'package:nyxx.commander/commander.dart';
 import 'package:http/http.dart' as http;
@@ -25,7 +24,8 @@ void main(List<String> arguments) {
   Commander(bot, prefix: CMD_PREFIX)
     ..registerCommand('ölhelp', helpCommand)
     ..registerCommand('reg', regCommand)
-    ..registerCommand('öl', oelCommand);
+    ..registerCommand('öl', oelCommand)
+    ..registerCommand('släpp', slappCommand);
 
   ELAPSED_SINCE_UPDATE = Stopwatch();
 
@@ -36,7 +36,7 @@ void main(List<String> arguments) {
     );
   });
 
-  Timer.periodic(Duration(hours: 4), updateTimeout);
+  Timer.periodic(Duration(hours: 6), updateTimeout);
 }
 
 void updateTimeout(Timer timer) {
@@ -155,6 +155,12 @@ Future<void> helpCommand(CommandContext ctx, String content) async {
         'Regsistrerar dig för påminnelser om ölsläpp. En dag innan varje släpp påminner jag dig om morgondagens släpp.')
     ..appendNewLine()
     ..appendNewLine()
+    ..appendBold('!släpp YYYY-MM-dd')
+    ..appendNewLine()
+    ..append('Visar dig ölen som släpps på givet datum, om det finns. Tex. ')
+    ..appendItalics('!släpp 1970-01-30')
+    ..appendNewLine()
+    ..appendNewLine()
     ..appendBold('!ölhelp')
     ..appendNewLine()
     ..append('Visar dig det här hjälpmeddelandet.');
@@ -169,7 +175,7 @@ Future<void> regCommand(CommandContext ctx, String content) async {
         content: ctx.member.mention + ' Du är redan registrerad! :beers:');
   } else {
     var myFile = File('sub.dat');
-    await myFile.writeAsString(dmChan.id.toString());
+    await myFile.writeAsString(dmChan.id.toString(), mode: FileMode.append);
     await ctx.reply(
         content: ctx.member.mention +
             ' Nu är du registrerad för öluppdateringar! :beers:');
@@ -228,6 +234,61 @@ Future<void> oelCommand(CommandContext ctx, String content) async {
 
   //Send message
   await ctx.reply(builder: oelMessage);
+}
+
+Future<void> slappCommand(CommandContext ctx, String content) async {
+  var input = content.split(' ');
+  if (input.length == 2) {
+    var parsedDate = DateTime.tryParse(input[1]);
+
+    if (parsedDate != null) {
+      await requestBeer();
+      for (var sale in BEER_SALES) {
+        var saleDate = DateTime.parse(sale.saleDate);
+        if (parsedDate == saleDate) {
+          //Compile beer list to string and sort by name.
+          var beerStr = '';
+          sale.beerList.sort((a, b) => a.name.compareTo(b.name));
+          sale.beerList.forEach((element) {
+            beerStr += '- ' + element.name + '\n';
+          });
+
+          //Bulild reply
+          var slappMessage = MessageBuilder()
+            ..append(ctx.member.mention)
+            ..appendNewLine()
+            ..append(' :beers: ')
+            ..appendBold(input[1])
+            ..appendNewLine()
+            ..append('Innehåller ')
+            ..appendBold(sale.beerList.length)
+            ..append(' nya öl:')
+            ..appendNewLine()
+            ..appendNewLine()
+            ..append(beerStr);
+
+          if (slappMessage.content.length > 2000) {
+            slappMessage.content = slappMessage.content.substring(
+                    0,
+                    slappMessage.content.substring(0, 1999).lastIndexOf('- ') -
+                        1) +
+                '\n...';
+          }
+          await ctx.reply(builder: slappMessage);
+          return;
+        }
+      }
+      await ctx.reply(
+          content: ctx.member.mention +
+              ' Fanns inget ölsläpp för ' +
+              DateFormat('yyyy-MM-dd').format(parsedDate));
+      return;
+    }
+  }
+
+  await ctx.reply(
+      content: ctx.member.mention +
+          ' Är du lite full? Jag accepterar bara ***!släpp YYYY-MM-dd***');
 }
 
 //Not used
