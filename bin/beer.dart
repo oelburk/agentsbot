@@ -40,9 +40,8 @@ class Beer {
         score = Random().nextInt(100);
 
   String buildBeerMessage() {
-    var message;
-    var title = MessageDecoration.underline.create(
-        MessageDecoration.bold.create(name + ' ' + alcohol_vol + '%\n'));
+    var title = MessageDecoration.underline.format(
+        MessageDecoration.bold.format(name + ' ' + alcohol_vol + '%\n'));
     return title;
   }
 }
