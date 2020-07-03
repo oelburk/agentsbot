@@ -18,6 +18,9 @@ Future<List<DMChannel>> getSubChannels(Nyxx bot) async {
   var myFile = File('sub.dat');
   var channelList = <DMChannel>[];
 
+  var fileExists = await myFile.exists();
+  if (!fileExists) await myFile.create();
+
   await myFile.readAsLines().then((value) async {
     for (var line in value) {
       var chan = await bot
