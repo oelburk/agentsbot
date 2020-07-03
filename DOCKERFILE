@@ -1,21 +1,25 @@
 FROM zeruel92/dart-armv7:latest
 
+#Install git
 RUN apt-get update && \
     apt-get upgrade -y && \
     apt-get install -y git
 
-#RUN git clone https://github.com/l7ssha/nyxx.git
+#Clone Nyxx
+RUN git clone https://github.com/l7ssha/nyxx.git
 
+#Get req. Dart SDK
 WORKDIR /opt/sdk
 RUN wget https://storage.googleapis.com/dart-archive/channels/beta/release/2.9.0-14.1.beta/sdk/dartsdk-linux-arm-release.zip
 
 RUN unzip -o dartsdk-linux-arm-release.zip
 RUN rm dartsdk-linux-arm-release.zip
 
+#Setup correct branch for Nyxx
 WORKDIR /nyxx
-ADD /nyxx /nyxx
-#RUN git checkout rewrite_modular
+RUN git checkout rewrite_modular
 
+#Prep. Dart code
 WORKDIR ../app
 
 ADD pubspec.* /app/
@@ -23,7 +27,5 @@ RUN pub get
 ADD . /app
 RUN pub get --offline
 
-#RUN chmod +x /usr/bin/dart
-
+#Run bot
 CMD ["dart", "--enable-experiment=non-nullable", "--no-null-safety", "bin/beer_bot.dart"]
-#ENTRYPOINT ["/usr/bin/dart", "--enable-experiment=non-nullable", "--no-null-safety", "bin/beer_bot.dart"]
