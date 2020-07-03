@@ -1,5 +1,9 @@
 FROM zeruel92/dart-armv7:latest
 
+RUN apt-get update && \
+    apt-get upgrade -y && \
+    apt-get install -y git
+
 #RUN git clone https://github.com/l7ssha/nyxx.git
 
 WORKDIR /nyxx
