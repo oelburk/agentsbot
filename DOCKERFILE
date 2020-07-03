@@ -7,6 +7,7 @@ RUN apt-get update && \
 
 #Clone Nyxx with req. branch
 RUN git clone -b rewrite_modular https://github.com/l7ssha/nyxx.git
+WORKDIR /nyxx
 
 #Get req. Dart SDK
 WORKDIR /opt/sdk
