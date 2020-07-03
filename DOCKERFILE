@@ -16,7 +16,7 @@ RUN unzip -o dartsdk-linux-arm-release.zip
 RUN rm dartsdk-linux-arm-release.zip
 
 #Prep. Dart code
-WORKDIR ../app
+WORKDIR /app
 
 ADD pubspec.* /app/
 RUN pub get
