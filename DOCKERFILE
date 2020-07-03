@@ -17,7 +17,7 @@ RUN pub get
 ADD . /app
 RUN pub get --offline
 
-RUN chmod +x /usr/bin/dart
+#RUN chmod +x /usr/bin/dart
 
-CMD ["/usr/bin/dart", "--enable-experiment=non-nullable", "--no-null-safety", "bin/beer_bot.dart"]
+CMD ["dart", "--enable-experiment=non-nullable", "--no-null-safety", "bin/beer_bot.dart"]
 #ENTRYPOINT ["/usr/bin/dart", "--enable-experiment=non-nullable", "--no-null-safety", "bin/beer_bot.dart"]
