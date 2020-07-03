@@ -6,6 +6,12 @@ RUN apt-get update && \
 
 #RUN git clone https://github.com/l7ssha/nyxx.git
 
+WORKDIR /opt/sdk
+RUN wget https://storage.googleapis.com/dart-archive/channels/beta/release/2.9.0-14.1.beta/sdk/dartsdk-linux-arm-release.zip
+
+RUN unzip dartsdk-linux-arm-release.zip
+RUN rm dartsdk-linux-arm-release.zip
+
 WORKDIR /nyxx
 ADD /nyxx /nyxx
 #RUN git checkout rewrite_modular
