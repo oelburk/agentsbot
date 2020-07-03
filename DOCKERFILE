@@ -5,8 +5,8 @@ RUN apt-get update && \
     apt-get upgrade -y && \
     apt-get install -y git
 
-#Clone Nyxx
-RUN git clone https://github.com/l7ssha/nyxx.git
+#Clone Nyxx with req. branch
+RUN git clone -b rewrite_modular --single-branch https://github.com/l7ssha/nyxx.git
 
 #Get req. Dart SDK
 WORKDIR /opt/sdk
@@ -14,10 +14,6 @@ RUN wget https://storage.googleapis.com/dart-archive/channels/beta/release/2.9.0
 
 RUN unzip -o dartsdk-linux-arm-release.zip
 RUN rm dartsdk-linux-arm-release.zip
-
-#Setup correct branch for Nyxx
-WORKDIR /nyxx
-RUN git checkout rewrite_modular
 
 #Prep. Dart code
 WORKDIR ../app
