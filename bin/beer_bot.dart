@@ -109,6 +109,7 @@ Future requestBeer() async {
     ELAPSED_SINCE_UPDATE.stop();
     print('Updating beer releases and beers...');
     final list = await fetchBeerList();
+    BEER_SALES.clear();
     for (var item in list['release']) {
       BEER_SALES.add(BeerList.fromJson(item));
     }
