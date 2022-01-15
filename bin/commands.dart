@@ -10,7 +10,6 @@ class Commands {
     'oelhelp',
     'Information om boten',
     [],
-    guild: Snowflake(715241642394648616),
   )..registerHandler((event) async {
       await event.acknowledge();
       await _helpCommand(event);
@@ -19,7 +18,6 @@ class Commands {
     'oel',
     'Visa de senaste ölreleaserna',
     [],
-    guild: Snowflake(715241642394648616),
   )..registerHandler((event) async {
       await event.acknowledge();
       await _oelCommand(event);
@@ -28,7 +26,6 @@ class Commands {
     'regga',
     'Regga dig för automatiska påminnelser om ölsläpp',
     [],
-    guild: Snowflake(715241642394648616),
   )..registerHandler((event) async {
       await event.acknowledge();
       await _regCommand(event);
@@ -37,7 +34,6 @@ class Commands {
     'stopp',
     'Sluta få påminnelser om ölsläpp',
     [],
-    guild: Snowflake(715241642394648616),
   )..registerHandler((event) async {
       await event.acknowledge();
       await _stopCommand(event);
@@ -50,7 +46,6 @@ class Commands {
       CommandOptionBuilder(CommandOptionType.string, 'datum', 'YYYY-MM-dd',
           required: true),
     ],
-    guild: Snowflake(715241642394648616),
   )..registerHandler((event) async {
       await event.acknowledge();
       await _slappCommand(event);
