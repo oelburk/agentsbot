@@ -26,8 +26,8 @@ void main(List<String> arguments) {
 
   final interactions = IInteractions.create(WebsocketInteractionBackend(bot));
 
-  Commands.getCommands().forEach((element) {
-    interactions.registerSlashCommand(element);
+  Commands.getCommands().forEach((command) {
+    interactions.registerSlashCommand(command);
   });
 
   interactions.syncOnReady();
