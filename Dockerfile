@@ -18,6 +18,7 @@ RUN cd .. && ls
 
 ADD pubspec.* /opt/app/
 RUN pub get
+ADD . /opt/app
 
 #Run bot
 CMD ["dart", "bin/beer_bot.dart"]
