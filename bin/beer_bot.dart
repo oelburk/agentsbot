@@ -26,12 +26,10 @@ void main(List<String> arguments) {
 
   final interactions = IInteractions.create(WebsocketInteractionBackend(bot));
 
-  // Register slash commands
-  interactions.registerSlashCommand(Commands.oel);
-  interactions.registerSlashCommand(Commands.help);
-  interactions.registerSlashCommand(Commands.register);
-  interactions.registerSlashCommand(Commands.stop);
-  interactions.registerSlashCommand(Commands.release);
+  Commands.getCommands().forEach((element) {
+    interactions.registerSlashCommand(element);
+  });
+
   interactions.syncOnReady();
 
   ELAPSED_SINCE_UPDATE = Stopwatch();

@@ -6,50 +6,52 @@ import 'beer_bot.dart';
 import 'utils.dart';
 
 class Commands {
-  static SlashCommandBuilder help = SlashCommandBuilder(
-    'oelhelp',
-    'Information om boten',
-    [],
-  )..registerHandler((event) async {
-      await event.acknowledge();
-      await _helpCommand(event);
-    });
-  static SlashCommandBuilder oel = SlashCommandBuilder(
-    'oel',
-    'Visa de senaste ölreleaserna',
-    [],
-  )..registerHandler((event) async {
-      await event.acknowledge();
-      await _oelCommand(event);
-    });
-  static SlashCommandBuilder register = SlashCommandBuilder(
-    'regga',
-    'Regga dig för automatiska påminnelser om ölsläpp',
-    [],
-  )..registerHandler((event) async {
-      await event.acknowledge();
-      await _regCommand(event);
-    });
-  static SlashCommandBuilder stop = SlashCommandBuilder(
-    'stopp',
-    'Sluta få påminnelser om ölsläpp',
-    [],
-  )..registerHandler((event) async {
-      await event.acknowledge();
-      await _stopCommand(event);
-    });
-
-  static SlashCommandBuilder release = SlashCommandBuilder(
-    'release',
-    'Hämta info om specifik release. tex. /release 2022-07-15',
-    [
-      CommandOptionBuilder(CommandOptionType.string, 'datum', 'YYYY-MM-dd',
-          required: true),
-    ],
-  )..registerHandler((event) async {
-      await event.acknowledge();
-      await _slappCommand(event);
-    });
+  static List<SlashCommandBuilder> getCommands() => [
+        SlashCommandBuilder(
+          'oelhelp',
+          'Information om boten',
+          [],
+        )..registerHandler((event) async {
+            await event.acknowledge();
+            await _helpCommand(event);
+          }),
+        SlashCommandBuilder(
+          'oel',
+          'Visa de senaste ölreleaserna',
+          [],
+        )..registerHandler((event) async {
+            await event.acknowledge();
+            await _oelCommand(event);
+          }),
+        SlashCommandBuilder(
+          'regga',
+          'Regga dig för automatiska påminnelser om ölsläpp',
+          [],
+        )..registerHandler((event) async {
+            await event.acknowledge();
+            await _regCommand(event);
+          }),
+        SlashCommandBuilder(
+          'stopp',
+          'Sluta få påminnelser om ölsläpp',
+          [],
+        )..registerHandler((event) async {
+            await event.acknowledge();
+            await _stopCommand(event);
+          }),
+        SlashCommandBuilder(
+          'release',
+          'Hämta info om specifik release. tex. /release 2022-07-15',
+          [
+            CommandOptionBuilder(
+                CommandOptionType.string, 'datum', 'YYYY-MM-dd',
+                required: true),
+          ],
+        )..registerHandler((event) async {
+            await event.acknowledge();
+            await _releaseCommand(event);
+          })
+      ];
 
   static Future<void> _helpCommand(ISlashCommandInteractionEvent ctx) async {
     var helpMessage = MessageBuilder()
@@ -168,7 +170,7 @@ class Commands {
     await ctx.respond(oelMessage);
   }
 
-  static Future<void> _slappCommand(ISlashCommandInteractionEvent ctx) async {
+  static Future<void> _releaseCommand(ISlashCommandInteractionEvent ctx) async {
     var input = ctx.args;
     if (input.length == 1) {
       var parsedDate = DateTime.tryParse(input[0].value);
