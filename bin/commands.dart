@@ -132,30 +132,65 @@ class Commands {
 
     for (var beerSale in BEER_SALES) {
       var saleDate = beerSale.saleDate;
-      var saleSize = beerSale.beerList.length.toString();
+      var saleSize = beerSale.beerList.length;
       beerSale.beerList.shuffle();
 
-      oelMessage
-        ..append(':beer: ')
-        ..appendBold(saleDate)
-        ..appendNewLine()
-        ..append('Innehåller ')
-        ..appendBold(saleSize)
-        ..append(' nya öl!')
-        ..appendNewLine()
-        ..appendNewLine()
-        ..append('Med bla. dessa öl:')
-        ..appendNewLine()
-        ..append('- ')
-        ..appendBold(beerSale.beerList[0].name)
-        ..appendNewLine()
-        ..append('- ')
-        ..appendBold(beerSale.beerList[1].name)
-        ..appendNewLine()
-        ..append('- ')
-        ..appendBold(beerSale.beerList[2].name)
-        ..appendNewLine()
-        ..appendNewLine();
+      if (saleSize >= 3) {
+        oelMessage
+          ..append(':beer: ')
+          ..appendBold(saleDate)
+          ..appendNewLine()
+          ..append('Innehåller ')
+          ..appendBold(saleSize)
+          ..append(' nya öl!')
+          ..appendNewLine()
+          ..appendNewLine()
+          ..append('Med bla. dessa öl:')
+          ..appendNewLine()
+          ..append('- ')
+          ..appendBold(beerSale.beerList[0].name)
+          ..appendNewLine()
+          ..append('- ')
+          ..appendBold(beerSale.beerList[1].name)
+          ..appendNewLine()
+          ..append('- ')
+          ..appendBold(beerSale.beerList[2].name)
+          ..appendNewLine()
+          ..appendNewLine();
+      } else if (saleSize == 2) {
+        oelMessage
+          ..append(':beer: ')
+          ..appendBold(saleDate)
+          ..appendNewLine()
+          ..append('Innehåller ')
+          ..appendBold(saleSize)
+          ..append(' nya öl!')
+          ..appendNewLine()
+          ..appendNewLine()
+          ..append('Med bla. dessa öl:')
+          ..appendNewLine()
+          ..append('- ')
+          ..appendBold(beerSale.beerList[0].name)
+          ..appendNewLine()
+          ..append('- ')
+          ..appendBold(beerSale.beerList[1].name)
+          ..appendNewLine()
+          ..appendNewLine();
+      } else if (saleSize == 1) {
+        oelMessage
+          ..append(':beer: ')
+          ..appendBold(saleDate)
+          ..appendNewLine()
+          ..append('Innehåller ')
+          ..appendBold(saleSize)
+          ..append(' ny öl!')
+          ..appendNewLine()
+          ..appendNewLine()
+          ..append('- ')
+          ..appendBold(beerSale.beerList[0].name)
+          ..appendNewLine()
+          ..appendNewLine();
+      }
     }
 
     oelMessage
