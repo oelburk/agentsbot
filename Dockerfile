@@ -5,13 +5,9 @@ RUN apt-get update && \
     apt-get upgrade -y && \
     apt-get install -y git
 
-#Clone Nyxx with req. branch
-WORKDIR /opt
-RUN git clone -b rewrite_modular https://github.com/l7ssha/nyxx.git
-
 #Get req. Dart SDK
 WORKDIR /opt/sdk
-RUN wget https://storage.googleapis.com/dart-archive/channels/beta/release/2.9.0-14.1.beta/sdk/dartsdk-linux-arm-release.zip
+RUN wget https://storage.googleapis.com/dart-archive/channels/beta/release/2.16.0-80.1.beta/sdk/dartsdk-linux-arm-release.zip
 
 RUN unzip -o dartsdk-linux-arm-release.zip
 RUN rm dartsdk-linux-arm-release.zip
@@ -23,7 +19,6 @@ RUN cd .. && ls
 ADD pubspec.* /opt/app/
 RUN pub get
 ADD . /opt/app
-RUN pub get --offline
 
 #Run bot
-CMD ["dart", "--enable-experiment=non-nullable", "--no-null-safety", "bin/beer_bot.dart"]
+CMD ["dart", "bin/beer_bot.dart"]
