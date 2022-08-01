@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:nyxx/nyxx.dart';
 import 'dart:io';
 
+import 'untapped_service.dart';
+
 Future<Map<String, dynamic>> httpGetRequest(String getURL) async {
   final response = await http.get(Uri.parse(getURL));
 
@@ -64,4 +66,30 @@ Future<void> unsubUser(INyxxWebsocket bot, Snowflake userSnowflake) async {
 Future<void> subUser(Snowflake userSnowflake) async {
   var myFile = File('sub.dat');
   await myFile.writeAsString(userSnowflake.toString(), mode: FileMode.append);
+}
+
+Future<bool> isUserUntappdRegistered(
+    Snowflake userSnowflake, String username) async {
+  var myFile = File('untappd.dat');
+
+  var fileExists = await myFile.exists();
+  if (!fileExists) await myFile.create();
+
+  return false;
+}
+
+Future<bool> regUntappdUser(
+    Snowflake userSnowflake, String untappdUsername) async {
+  try {
+    if (!await UntappdService.isValidUsername(untappdUsername)) {
+      return false;
+    }
+    var untappdFile = File('untappd.dat');
+    await untappdFile.writeAsString(
+        '${userSnowflake.toString()};$untappdUsername',
+        mode: FileMode.append);
+    return true;
+  } catch (e) {
+    return false;
+  }
 }

@@ -10,11 +10,11 @@ import 'commands.dart';
 import 'utils.dart';
 import 'package:intl/intl.dart';
 
-String BOT_TOKEN = Platform.environment['DISCORD_TOKEN'];
-Stopwatch ELAPSED_SINCE_UPDATE;
+String BOT_TOKEN = Platform.environment['DISCORD_TOKEN'] ?? '';
+late final Stopwatch ELAPSED_SINCE_UPDATE;
 List<BeerList> BEER_SALES = <BeerList>[];
 int REFRESH_THRESHOLD = 14400000;
-INyxxWebsocket bot;
+late final INyxxWebsocket bot;
 
 void main(List<String> arguments) {
   bot =
@@ -38,11 +38,14 @@ void main(List<String> arguments) {
     print('Agent S is ready!');
   });
 
-  Timer.periodic(Duration(hours: 6), updateTimeout);
+  Timer.periodic(Duration(hours: 6), (timer) => updateSubscribers());
+
+  Timer.periodic(Duration(minutes: 15), (timer) => checkUntappd());
 }
 
-void updateTimeout(Timer timer) {
-  updateSubscribers();
+void checkUntappd() async {
+  var myFile = File('untappd.dat');
+  if (!await myFile.exists()) return;
 }
 
 Future<void> updateSubscribers() async {

@@ -50,12 +50,26 @@ class Commands {
         )..registerHandler((event) async {
             await event.acknowledge();
             await _releaseCommand(event);
-          })
+          }),
+        SlashCommandBuilder(
+          'untappd',
+          'Låt mig dela dina incheckningar från untappd!',
+          [
+            CommandOptionBuilder(
+                CommandOptionType.string,
+                'Användarnamn på untappd (kontot måste minst ha 1 incheckning)',
+                'e.g. cornholio',
+                required: true),
+          ],
+        )..registerHandler((event) async {
+            await event.acknowledge();
+            await _untappdRegCommand(event);
+          }),
       ];
 
   static Future<void> _helpCommand(ISlashCommandInteractionEvent ctx) async {
     var helpMessage = MessageBuilder()
-      ..append(ctx.interaction.userAuthor.mention)
+      ..append(ctx.interaction.userAuthor!.mention)
       ..appendNewLine()
       ..append('Kul att du är sugen öl, det här kan jag göra för dig:')
       ..appendNewLine()
@@ -85,33 +99,33 @@ class Commands {
   }
 
   static Future<void> _regCommand(ISlashCommandInteractionEvent ctx) async {
-    var dmChan = await ctx.interaction.userAuthor.dmChannel;
+    var dmChan = await ctx.interaction.userAuthor!.dmChannel;
 
     if (await isUserSubbed(bot, dmChan.id)) {
       await ctx.respond(MessageBuilder.content(
-          ctx.interaction.userAuthor.mention +
+          ctx.interaction.userAuthor!.mention +
               ' Du är redan registrerad! :beers:'));
     } else {
       await subUser(dmChan.id);
 
       await ctx.respond(MessageBuilder.content(
-          ctx.interaction.userAuthor.mention +
+          ctx.interaction.userAuthor!.mention +
               ' Nu är du registrerad för öluppdateringar! :beers:'));
     }
   }
 
   static Future<void> _stopCommand(ISlashCommandInteractionEvent ctx) async {
-    var dmChan = await ctx.interaction.userAuthor.dmChannel;
+    var dmChan = await ctx.interaction.userAuthor!.dmChannel;
 
     if (await isUserSubbed(bot, dmChan.id)) {
       await unsubUser(bot, dmChan.id);
 
       await ctx.respond(MessageBuilder.content(
-          ctx.interaction.userAuthor.mention +
+          ctx.interaction.userAuthor!.mention +
               ' Tråkigt att du inte vill ha mer öl! :beers:'));
     } else {
       await ctx.respond(MessageBuilder.content(
-          ctx.interaction.userAuthor.mention +
+          ctx.interaction.userAuthor!.mention +
               ' Du är inte registrerad! :beers:'));
     }
   }
@@ -122,7 +136,7 @@ class Commands {
 
     //Build message
     var oelMessage = MessageBuilder()
-      ..append(ctx.interaction.userAuthor.mention)
+      ..append(ctx.interaction.userAuthor!.mention)
       ..appendNewLine()
       ..append('Det finns ')
       ..appendBold(BEER_SALES.length.toString())
@@ -224,7 +238,7 @@ class Commands {
 
             //Bulild reply
             var slappMessage = MessageBuilder()
-              ..append(ctx.interaction.userAuthor.mention)
+              ..append(ctx.interaction.userAuthor!.mention)
               ..appendNewLine()
               ..append(' :beers: ')
               ..appendBold(input[0].value)
@@ -250,7 +264,7 @@ class Commands {
           }
         }
         await ctx.respond(MessageBuilder.content(
-            ctx.interaction.userAuthor.mention +
+            ctx.interaction.userAuthor!.mention +
                 ' Fanns inget ölsläpp för ' +
                 DateFormat('yyyy-MM-dd').format(parsedDate)));
         return;
@@ -258,7 +272,33 @@ class Commands {
     }
 
     await ctx.respond(MessageBuilder.content(
-        ctx.interaction.userAuthor.mention +
+        ctx.interaction.userAuthor!.mention +
             ' Är du lite full? Jag accepterar bara ***!släpp YYYY-MM-dd***'));
+  }
+
+  static Future<void> _untappdRegCommand(
+      ISlashCommandInteractionEvent ctx) async {
+    if (ctx.args.length != 1) {
+      await ctx.respond(MessageBuilder.content(
+          ctx.interaction.userAuthor!.mention +
+              ' Är du lite full? Jag saknar ditt untappd username'));
+    }
+    var dmChan = await ctx.interaction.userAuthor!.dmChannel;
+    var untappdUsername = ctx.args.first.value;
+
+    if (await isUserUntappdRegistered(dmChan.id, untappdUsername)) {
+      await ctx.respond(MessageBuilder.content(
+          ctx.interaction.userAuthor!.mention +
+              ' Du är redan registrerad! :beers:'));
+    } else {
+      if (!await regUntappdUser(dmChan.id, untappdUsername)) {
+        await ctx.respond(MessageBuilder.content(
+            ctx.interaction.userAuthor!.mention +
+                ' Hoppsan, något gick fel! :beers:'));
+      }
+      await ctx.respond(MessageBuilder.content(ctx
+              .interaction.userAuthor!.mention +
+          ' Nu ser jag till att plocka dina incheckingar från untappd! :beers:'));
+    }
   }
 }
