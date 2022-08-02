@@ -86,11 +86,18 @@ void checkUntappd() async {
         embedBuilder.url = UntappdService.getCheckinUrl(
             latestCheckinUntappd.id, untappdUsername);
         embedBuilder.description = latestCheckinUntappd.title;
-        embedBuilder.addField(
-            field: EmbedFieldBuilder('Comment', latestCheckinUntappd.comment));
-        embedBuilder.addField(
-            field: EmbedFieldBuilder('Rating',
-                _buildRatingEmoji(double.parse(latestCheckinUntappd.rating))));
+        if (latestCheckinUntappd.comment.isNotEmpty) {
+          embedBuilder.addField(
+              field:
+                  EmbedFieldBuilder('Comment', latestCheckinUntappd.comment));
+        }
+        if (latestCheckinUntappd.rating.isNotEmpty) {
+          embedBuilder.addField(
+              field: EmbedFieldBuilder(
+                  'Rating',
+                  _buildRatingEmoji(
+                      double.parse(latestCheckinUntappd.rating))));
+        }
         if (latestCheckinUntappd.photoAddress != null) {
           embedBuilder.imageUrl = latestCheckinUntappd.photoAddress;
         }
