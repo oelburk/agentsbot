@@ -20,7 +20,7 @@ int REFRESH_THRESHOLD = 14400000;
 late final INyxxWebsocket bot;
 
 void main(List<String> arguments) {
-  Hive.init('./data');
+  Hive.init('/data');
   Hive.openBox(HiveConstants.untappdBox);
 
   bot =
