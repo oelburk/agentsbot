@@ -7,7 +7,7 @@ RUN apt-get update && \
 
 #Get req. Dart SDK
 WORKDIR /opt/sdk
-RUN wget https://storage.googleapis.com/dart-archive/channels/beta/release/2.16.0-80.1.beta/sdk/dartsdk-linux-arm-release.zip
+RUN wget https://storage.googleapis.com/dart-archive/channels/stable/release/2.17.6/sdk/dartsdk-linux-arm-release.zip
 
 RUN unzip -o dartsdk-linux-arm-release.zip
 RUN rm dartsdk-linux-arm-release.zip
