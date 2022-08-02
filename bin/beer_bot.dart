@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ffi';
 import 'package:hive/hive.dart';
 import 'package:nyxx/nyxx.dart';
 import 'package:http/http.dart' as http;
@@ -21,7 +20,7 @@ int REFRESH_THRESHOLD = 14400000;
 late final INyxxWebsocket bot;
 
 void main(List<String> arguments) {
-  Hive.init('./');
+  Hive.init('./data');
   Hive.openBox(HiveConstants.untappdBox);
 
   bot =

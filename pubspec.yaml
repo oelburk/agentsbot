@@ -11,7 +11,7 @@ dependencies:
   intl: ^0.17.0
   nyxx: ^3.2.3
   nyxx_commander: ^3.0.0
-  nyxx_interactions: ^3.3.0
+  nyxx_interactions: ^4.2.1
   web_scraper: ^0.1.4
  
 
