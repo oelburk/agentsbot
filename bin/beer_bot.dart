@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:ffi';
+import 'package:hive/hive.dart';
 import 'package:nyxx/nyxx.dart';
 import 'package:http/http.dart' as http;
 import 'package:nyxx_interactions/nyxx_interactions.dart';
@@ -7,6 +9,8 @@ import 'dart:io';
 import 'beer.dart';
 import 'beerlist.dart';
 import 'commands.dart';
+import 'constants/hive_constants.dart';
+import 'untapped_service.dart';
 import 'utils.dart';
 import 'package:intl/intl.dart';
 
@@ -17,6 +21,9 @@ int REFRESH_THRESHOLD = 14400000;
 late final INyxxWebsocket bot;
 
 void main(List<String> arguments) {
+  Hive.init('./');
+  Hive.openBox(HiveConstants.untappdBox);
+
   bot =
       NyxxFactory.createNyxxWebsocket(BOT_TOKEN, GatewayIntents.allUnprivileged)
         ..registerPlugin(Logging())
@@ -40,12 +47,78 @@ void main(List<String> arguments) {
 
   Timer.periodic(Duration(hours: 6), (timer) => updateSubscribers());
 
-  Timer.periodic(Duration(minutes: 15), (timer) => checkUntappd());
+  Timer.periodic(Duration(minutes: 12), (timer) => checkUntappd());
 }
 
 void checkUntappd() async {
-  var myFile = File('untappd.dat');
-  if (!await myFile.exists()) return;
+  var box = await Hive.box(HiveConstants.untappdBox);
+
+  var listOfUsers =
+      await box.get(HiveConstants.untappdUserList, defaultValue: {});
+  var latestCheckins =
+      await box.get(HiveConstants.untappdLatestUserCheckins, defaultValue: {});
+
+  var updateChannelId = await box.get(HiveConstants.untappdUpdateChannelId);
+
+  if (updateChannelId == null) {
+    print('No channel available for updates!');
+    return;
+  }
+
+  if (listOfUsers.isEmpty) print('No users available to scrape!');
+
+  listOfUsers.forEach((userSnowflake, untappdUsername) async {
+    var latestCheckinDisk = latestCheckins[untappdUsername];
+    try {
+      var latestCheckinUntappd =
+          await UntappdService.getLatestCheckin(untappdUsername);
+
+      // If a new ID is available, post update!
+      if (latestCheckinUntappd != null &&
+          latestCheckinDisk != latestCheckinUntappd.id) {
+        // Update latest saved checkin
+        latestCheckins.addAll({untappdUsername: latestCheckinUntappd.id});
+        await box.put(HiveConstants.untappdLatestUserCheckins, latestCheckins);
+
+        // Build update message with info from untappd checkin
+        var user = await bot.fetchUser(Snowflake(userSnowflake));
+        var embedBuilder = EmbedBuilder();
+        embedBuilder.title = '${user.username} dricker öl!';
+        embedBuilder.url = UntappdService.getCheckinUrl(
+            latestCheckinUntappd.id, untappdUsername);
+        embedBuilder.description = latestCheckinUntappd.title;
+        embedBuilder.addField(
+            field: EmbedFieldBuilder('Comment', latestCheckinUntappd.comment));
+        embedBuilder.addField(
+            field: EmbedFieldBuilder('Rating',
+                _buildRatingEmoji(int.parse(latestCheckinUntappd.rating))));
+        if (latestCheckinUntappd.photoAddress != null) {
+          embedBuilder.imageUrl = latestCheckinUntappd.photoAddress;
+        }
+
+        // Get channel used for untappd updates, previously set by discord admin.
+        var updateChannel = await bot
+            .fetchChannel(Snowflake(updateChannelId))
+            .then((value) => (value as ITextChannel));
+
+        // Send update message
+        await updateChannel.sendMessage(MessageBuilder.embed(embedBuilder));
+
+        // Sleep 5 seconds per user to avoid suspicious requests to untappd server
+        sleep(Duration(seconds: 5));
+      }
+    } catch (e) {
+      print(e.toString());
+    }
+  });
+}
+
+String _buildRatingEmoji(int rating) {
+  var ratingString = '';
+  for (var i = 0; i < rating; i++) {
+    ratingString += ':beer: ';
+  }
+  return ratingString;
 }
 
 Future<void> updateSubscribers() async {

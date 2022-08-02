@@ -7,6 +7,7 @@ environment:
   sdk: '>=2.17.1 <3.0.0'
 
 dependencies: 
+  hive: ^2.2.3
   intl: ^0.17.0
   nyxx: ^3.2.3
   nyxx_commander: ^3.0.0

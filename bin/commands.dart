@@ -1,8 +1,10 @@
+import 'package:hive/hive.dart';
 import 'package:intl/intl.dart';
 import 'package:nyxx/nyxx.dart';
 import 'package:nyxx_interactions/nyxx_interactions.dart';
 
 import 'beer_bot.dart';
+import 'constants/hive_constants.dart';
 import 'utils.dart';
 
 class Commands {
@@ -55,15 +57,21 @@ class Commands {
           'untappd',
           'Låt mig dela dina incheckningar från untappd!',
           [
-            CommandOptionBuilder(
-                CommandOptionType.string,
-                'Användarnamn på untappd (kontot måste minst ha 1 incheckning)',
-                'e.g. cornholio',
+            CommandOptionBuilder(CommandOptionType.string, 'username',
+                'e.g. cornholio (kontot måste minst ha 1 incheckning)',
                 required: true),
           ],
         )..registerHandler((event) async {
             await event.acknowledge();
-            await _untappdRegCommand(event);
+            await _untappdCommand(event);
+          }),
+        SlashCommandBuilder(
+          'setup',
+          'Registrera untappd-uppdateringar till den här kanalen (Admin)',
+          [],
+        )..registerHandler((event) async {
+            await event.acknowledge();
+            await _setupUntappdServiceCommand(event);
           }),
       ];
 
@@ -276,29 +284,43 @@ class Commands {
             ' Är du lite full? Jag accepterar bara ***!släpp YYYY-MM-dd***'));
   }
 
-  static Future<void> _untappdRegCommand(
-      ISlashCommandInteractionEvent ctx) async {
+  static Future<void> _untappdCommand(ISlashCommandInteractionEvent ctx) async {
+    var box = await Hive.box(HiveConstants.untappdBox);
+    if (box.get(HiveConstants.untappdUpdateChannelId) == null) {
+      await ctx.respond(MessageBuilder.content(
+          ctx.interaction.userAuthor!.mention +
+              ' Hoppsan, be din admin köra setup först! :beers:'));
+      return;
+    }
     if (ctx.args.length != 1) {
       await ctx.respond(MessageBuilder.content(
           ctx.interaction.userAuthor!.mention +
               ' Är du lite full? Jag saknar ditt untappd username'));
     }
-    var dmChan = await ctx.interaction.userAuthor!.dmChannel;
+    var discordUser = await ctx.interaction.userAuthor!.id;
     var untappdUsername = ctx.args.first.value;
 
-    if (await isUserUntappdRegistered(dmChan.id, untappdUsername)) {
+    if (!await regUntappdUser(discordUser, untappdUsername)) {
       await ctx.respond(MessageBuilder.content(
           ctx.interaction.userAuthor!.mention +
-              ' Du är redan registrerad! :beers:'));
-    } else {
-      if (!await regUntappdUser(dmChan.id, untappdUsername)) {
-        await ctx.respond(MessageBuilder.content(
-            ctx.interaction.userAuthor!.mention +
-                ' Hoppsan, något gick fel! :beers:'));
-      }
-      await ctx.respond(MessageBuilder.content(ctx
-              .interaction.userAuthor!.mention +
-          ' Nu ser jag till att plocka dina incheckingar från untappd! :beers:'));
+              ' Hoppsan, något gick fel! :beers:'));
+    }
+    await ctx.respond(MessageBuilder.content(ctx
+            .interaction.userAuthor!.mention +
+        ' Nu ser jag till att plocka dina incheckingar från untappd! :beers:'));
+  }
+
+  static Future<void> _setupUntappdServiceCommand(
+      ISlashCommandInteractionEvent ctx) async {
+    if (ctx.interaction.memberAuthorPermissions?.administrator ?? false) {
+      var beerUpdateChannel = await ctx.interaction.channel.getOrDownload();
+
+      var box = await Hive.box(HiveConstants.untappdBox);
+      await box.put(HiveConstants.untappdUpdateChannelId,
+          beerUpdateChannel.id.toString());
+
+      await beerUpdateChannel.sendMessage(MessageBuilder.content(
+          ' Jag kommer posta uppdateringar från untappd-konton här! Vill du synas, kör /untappd följt med ditt användarnamn på untappd'));
     }
   }
 }

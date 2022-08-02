@@ -1,7 +1,7 @@
 import 'package:web_scraper/web_scraper.dart';
 
 class UntappdService {
-  /// Check validility of the username provided
+  /// Check validity of the username provided
   ///
   /// Will return true if given username has at least one checkin on Untappd.
   static Future<bool> isValidUsername(String untappdUsername) async {
@@ -63,6 +63,11 @@ class UntappdService {
           photoAddress: checkinPhotoAddress);
     }
     return null;
+  }
+
+  /// Get untappd detailed checkin URL
+  static String getCheckinUrl(String checkinId, String username) {
+    return 'https://untappd.com/user/$username/checkin/$checkinId';
   }
 }
 
