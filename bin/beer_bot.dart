@@ -52,7 +52,7 @@ void main(List<String> arguments) {
 void checkUntappd() async {
   var box = await Hive.box(HiveConstants.untappdBox);
 
-  var listOfUsers =
+  Map<dynamic, dynamic> listOfUsers =
       await box.get(HiveConstants.untappdUserList, defaultValue: {});
   var latestCheckins =
       await box.get(HiveConstants.untappdLatestUserCheckins, defaultValue: {});
@@ -90,7 +90,7 @@ void checkUntappd() async {
             field: EmbedFieldBuilder('Comment', latestCheckinUntappd.comment));
         embedBuilder.addField(
             field: EmbedFieldBuilder('Rating',
-                _buildRatingEmoji(int.parse(latestCheckinUntappd.rating))));
+                _buildRatingEmoji(double.parse(latestCheckinUntappd.rating))));
         if (latestCheckinUntappd.photoAddress != null) {
           embedBuilder.imageUrl = latestCheckinUntappd.photoAddress;
         }
@@ -102,22 +102,21 @@ void checkUntappd() async {
 
         // Send update message
         await updateChannel.sendMessage(MessageBuilder.embed(embedBuilder));
-
-        // Sleep 5 seconds per user to avoid suspicious requests to untappd server
-        sleep(Duration(seconds: 5));
       }
+      // Sleep 5 seconds per user to avoid suspicious requests to untappd server
+      await Future.delayed(Duration(seconds: 5));
     } catch (e) {
       print(e.toString());
     }
   });
 }
 
-String _buildRatingEmoji(int rating) {
+String _buildRatingEmoji(double rating) {
   var ratingString = '';
-  for (var i = 0; i < rating; i++) {
+  for (var i = 0; i < rating.toInt(); i++) {
     ratingString += ':beer: ';
   }
-  return ratingString;
+  return '$ratingString ($rating)';
 }
 
 Future<void> updateSubscribers() async {

@@ -36,20 +36,23 @@ class UntappdService {
       var baseCheckinAddress =
           'div#main-stream > #checkin_$latestCheckin > div.checkin > div.top';
 
-      final checkinTitle = webScraper
-          .getElementTitle('$baseCheckinAddress > p.text')
-          .first
-          .trim();
+      final checkinTitleElement =
+          webScraper.getElementTitle('$baseCheckinAddress > p.text');
+      final checkinTitle =
+          checkinTitleElement.isEmpty ? '' : checkinTitleElement.first.trim();
 
-      final String checkinRating = webScraper.getElement(
+      final checkinRatingElement = webScraper.getElement(
           '$baseCheckinAddress > div.checkin-comment > div.rating-serving > div.caps ',
-          ['data-rating']).first['attributes']['data-rating'];
+          ['data-rating']);
+      final String checkinRating = checkinRatingElement.isEmpty
+          ? '0'
+          : checkinRatingElement.first['attributes']['data-rating'];
 
-      final checkinComment = webScraper
-          .getElementTitle(
-              '$baseCheckinAddress > div.checkin-comment > p.comment-text')
-          .first
-          .trim();
+      final checkinCommentElement = webScraper.getElementTitle(
+          '$baseCheckinAddress > div.checkin-comment > p.comment-text');
+      final checkinComment = checkinCommentElement.isEmpty
+          ? ''
+          : checkinCommentElement.first.trim();
 
       final photo = webScraper.getElementAttribute(
           '$baseCheckinAddress > p.photo > a > img', 'data-original');
