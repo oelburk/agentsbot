@@ -41,7 +41,7 @@ void main(List<String> arguments) {
   ELAPSED_SINCE_UPDATE = Stopwatch();
 
   bot.eventsWs.onReady.listen((e) {
-    print('Agent S is ready!');
+    print('Agent Hops is ready!');
   });
 
   Timer.periodic(Duration(hours: 6), (timer) => updateSubscribers());
@@ -82,7 +82,7 @@ void checkUntappd() async {
         // Build update message with info from untappd checkin
         var user = await bot.fetchUser(Snowflake(userSnowflake));
         var embedBuilder = EmbedBuilder();
-        embedBuilder.title = '${user.username} dricker öl!';
+        embedBuilder.title = '${user.username} is drinking beer!';
         embedBuilder.url = UntappdService.getCheckinUrl(
             latestCheckinUntappd.id, untappdUsername);
         embedBuilder.description = latestCheckinUntappd.title;
@@ -152,17 +152,17 @@ Future<void> updateSubscribers() async {
       });
 
       var updateMessage = MessageBuilder()
-        ..append(':beers: Hej!')
+        ..append(':beers: Hey!')
         ..appendNewLine()
-        ..append('Kom ihåg ölsläppet imorgon, ')
+        ..append('There is a fresh beer release tomorrow, ')
         ..appendBold(DateFormat('yyyy-MM-dd').format(saleDate))
-        ..append('. Bolaget öppnar 10:00')
+        ..append('. Bolaget opens 10:00')
         ..appendNewLine()
-        ..append('Det finns ')
+        ..append('There are ')
         ..appendBold(beers.length.toString())
-        ..append(' nya öl imorgon.')
+        ..append(' new beers tomorrow.')
         ..appendNewLine()
-        ..append('Mer info hittar du på https://systembevakningsagenten.se/')
+        ..append('For more info, visit https://systembevakningsagenten.se/')
         ..appendNewLine()
         ..appendNewLine()
         ..append(beersStr);

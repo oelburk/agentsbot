@@ -10,8 +10,8 @@ import 'utils.dart';
 class Commands {
   static List<SlashCommandBuilder> getCommands() => [
         SlashCommandBuilder(
-          'oelhelp',
-          'Information om boten',
+          'help',
+          'List commands available',
           [],
         )..registerHandler((event) async {
             await event.acknowledge();
@@ -19,23 +19,23 @@ class Commands {
           }),
         SlashCommandBuilder(
           'oel',
-          'Visa de senaste ölreleaserna',
+          'Show the latest beer releases.',
           [],
         )..registerHandler((event) async {
             await event.acknowledge();
             await _oelCommand(event);
           }),
         SlashCommandBuilder(
-          'regga',
-          'Regga dig för automatiska påminnelser om ölsläpp',
+          'subscribe',
+          'Subscribe to beer release reminders.',
           [],
         )..registerHandler((event) async {
             await event.acknowledge();
             await _regCommand(event);
           }),
         SlashCommandBuilder(
-          'stopp',
-          'Sluta få påminnelser om ölsläpp',
+          'stop',
+          'Unsubscribe to beer release reminders.',
           [],
         )..registerHandler((event) async {
             await event.acknowledge();
@@ -43,7 +43,7 @@ class Commands {
           }),
         SlashCommandBuilder(
           'release',
-          'Hämta info om specifik release. tex. /release 2022-07-15',
+          'Detailed info about a specific beer release e.g. /release 2022-07-15',
           [
             CommandOptionBuilder(
                 CommandOptionType.string, 'datum', 'YYYY-MM-dd',
@@ -55,7 +55,7 @@ class Commands {
           }),
         SlashCommandBuilder(
           'untappd',
-          'Låt mig dela dina incheckningar från untappd!',
+          'Let me know your untappd username so I can post automatic updates from your untappd account.',
           [
             CommandOptionBuilder(CommandOptionType.string, 'username',
                 'e.g. cornholio (kontot måste minst ha 1 incheckning)',
@@ -67,8 +67,9 @@ class Commands {
           }),
         SlashCommandBuilder(
           'setup',
-          'Registrera untappd-uppdateringar till den här kanalen (Admin)',
+          'Setup the bot to post untappd updates to the current channel.',
           [],
+          requiredPermissions: PermissionsConstants.administrator,
         )..registerHandler((event) async {
             await event.acknowledge();
             await _setupUntappdServiceCommand(event);
@@ -79,29 +80,43 @@ class Commands {
     var helpMessage = MessageBuilder()
       ..append(ctx.interaction.userAuthor!.mention)
       ..appendNewLine()
-      ..append('Kul att du är sugen öl, det här kan jag göra för dig:')
+      ..append('Did anyone say beer? This is what I can do for you:')
       ..appendNewLine()
       ..appendNewLine()
-      ..appendBold('!öl')
+      ..appendBold('/oel')
       ..appendNewLine()
-      ..append('Listar alla akutella ölsläpp.')
+      ..append('Lists all known beer releases.')
       ..appendNewLine()
       ..appendNewLine()
-      ..appendBold('!reg')
+      ..appendBold('/subscribe')
       ..appendNewLine()
       ..append(
-          'Regsistrerar dig för påminnelser om ölsläpp. En dag innan varje släpp påminner jag dig om morgondagens släpp.')
+          'Subscribe to automatic beer release reminders. Reminders will be posted 3 times during the day before release.')
       ..appendNewLine()
       ..appendNewLine()
-      ..appendBold('!släpp YYYY-MM-dd')
+      ..appendBold('/release YYYY-MM-dd')
       ..appendNewLine()
-      ..append('Visar dig ölen som släpps på givet datum, om det finns. Tex. ')
-      ..appendItalics('!släpp 1970-01-30')
+      ..append(
+          'Posts the beer release for given date in the format YYYY-MM-dd. e.g ')
+      ..appendItalics('/release 1970-01-30')
       ..appendNewLine()
       ..appendNewLine()
-      ..appendBold('!ölhelp')
+      ..appendBold('/help')
       ..appendNewLine()
-      ..append('Visar dig det här hjälpmeddelandet.');
+      ..append('Shows you this help message.')
+      ..appendNewLine()
+      ..appendNewLine()
+      ..appendBold('/untappd untappd_username')
+      ..appendNewLine()
+      ..append(
+          'Let me know your untappd username so I can post automatic updates from your untappd account. e.g ')
+      ..appendItalics('/untappd cornholio')
+      ..appendNewLine()
+      ..appendNewLine()
+      ..appendBold('/setup')
+      ..appendNewLine()
+      ..append(
+          'Setup the bot to post untappd updates to the current channel. Only admins can issue this command. Also, this is needed before any untappd updates can occur.');
 
     await ctx.respond(helpMessage);
   }
@@ -112,13 +127,13 @@ class Commands {
     if (await isUserSubbed(bot, dmChan.id)) {
       await ctx.respond(MessageBuilder.content(
           ctx.interaction.userAuthor!.mention +
-              ' Du är redan registrerad! :beers:'));
+              ' You are already subscribed! :beers:'));
     } else {
       await subUser(dmChan.id);
 
       await ctx.respond(MessageBuilder.content(
           ctx.interaction.userAuthor!.mention +
-              ' Nu är du registrerad för öluppdateringar! :beers:'));
+              ' You are now subscribed to beer release reminders! :beers:'));
     }
   }
 
@@ -130,11 +145,11 @@ class Commands {
 
       await ctx.respond(MessageBuilder.content(
           ctx.interaction.userAuthor!.mention +
-              ' Tråkigt att du inte vill ha mer öl! :beers:'));
+              ' Sad, no more beer for you! :beers:'));
     } else {
       await ctx.respond(MessageBuilder.content(
           ctx.interaction.userAuthor!.mention +
-              ' Du är inte registrerad! :beers:'));
+              ' You are not subscribed! :beers:'));
     }
   }
 
@@ -146,9 +161,9 @@ class Commands {
     var oelMessage = MessageBuilder()
       ..append(ctx.interaction.userAuthor!.mention)
       ..appendNewLine()
-      ..append('Det finns ')
+      ..append('There are ')
       ..appendBold(BEER_SALES.length.toString())
-      ..append(' aktuella släpp!')
+      ..append(' current releases!')
       ..appendNewLine()
       ..appendNewLine();
 
@@ -162,12 +177,12 @@ class Commands {
           ..append(':beer: ')
           ..appendBold(saleDate)
           ..appendNewLine()
-          ..append('Innehåller ')
+          ..append('This release has ')
           ..appendBold(saleSize)
-          ..append(' nya öl!')
+          ..append(' new beers!')
           ..appendNewLine()
           ..appendNewLine()
-          ..append('Med bla. dessa öl:')
+          ..append('Some of them are:')
           ..appendNewLine()
           ..append('- ')
           ..appendBold(beerSale.beerList[0].name)
@@ -184,12 +199,12 @@ class Commands {
           ..append(':beer: ')
           ..appendBold(saleDate)
           ..appendNewLine()
-          ..append('Innehåller ')
+          ..append('This release has ')
           ..appendBold(saleSize)
-          ..append(' nya öl!')
+          ..append(' new beers!')
           ..appendNewLine()
           ..appendNewLine()
-          ..append('Med bla. dessa öl:')
+          ..append('Some of them are:')
           ..appendNewLine()
           ..append('- ')
           ..appendBold(beerSale.beerList[0].name)
@@ -203,9 +218,9 @@ class Commands {
           ..append(':beer: ')
           ..appendBold(saleDate)
           ..appendNewLine()
-          ..append('Innehåller ')
+          ..append('This release has ')
           ..appendBold(saleSize)
-          ..append(' ny öl!')
+          ..append(' new beer!')
           ..appendNewLine()
           ..appendNewLine()
           ..append('- ')
@@ -218,10 +233,10 @@ class Commands {
     oelMessage
       ..append('---')
       ..appendNewLine()
-      ..append('För mer information: https://systembevakningsagenten.se/')
+      ..append('For more information: https://systembevakningsagenten.se/')
       ..appendNewLine()
       ..appendNewLine()
-      ..append('Skål! :beers:');
+      ..append('Cheers! :beers:');
 
     //Send message
     await ctx.respond(oelMessage);
@@ -281,7 +296,7 @@ class Commands {
 
     await ctx.respond(MessageBuilder.content(
         ctx.interaction.userAuthor!.mention +
-            ' Är du lite full? Jag accepterar bara ***!släpp YYYY-MM-dd***'));
+            ' Are you drunk buddy? I only accept ***/release YYYY-MM-dd***'));
   }
 
   static Future<void> _untappdCommand(ISlashCommandInteractionEvent ctx) async {
@@ -289,13 +304,13 @@ class Commands {
     if (box.get(HiveConstants.untappdUpdateChannelId) == null) {
       await ctx.respond(MessageBuilder.content(
           ctx.interaction.userAuthor!.mention +
-              ' Hoppsan, be din admin köra setup först! :beers:'));
+              ' Whops, ask your admin to run setup first! :beers:'));
       return;
     }
     if (ctx.args.length != 1) {
       await ctx.respond(MessageBuilder.content(
           ctx.interaction.userAuthor!.mention +
-              ' Är du lite full? Jag saknar ditt untappd username'));
+              ' Are you drunk buddy? Your username is missing.'));
     }
     var discordUser = await ctx.interaction.userAuthor!.id;
     var untappdUsername = ctx.args.first.value;
@@ -303,11 +318,11 @@ class Commands {
     if (!await regUntappdUser(discordUser, untappdUsername)) {
       await ctx.respond(MessageBuilder.content(
           ctx.interaction.userAuthor!.mention +
-              ' Hoppsan, något gick fel! :beers:'));
+              ' Whops, something went sideways! :beers:'));
     }
-    await ctx.respond(MessageBuilder.content(ctx
-            .interaction.userAuthor!.mention +
-        ' Nu ser jag till att plocka dina incheckingar från untappd! :beers:'));
+    await ctx.respond(MessageBuilder.content(
+        ctx.interaction.userAuthor!.mention +
+            ' From now on I will post your updates from untappd! :beers:'));
   }
 
   static Future<void> _setupUntappdServiceCommand(
@@ -320,7 +335,7 @@ class Commands {
           beerUpdateChannel.id.toString());
 
       await beerUpdateChannel.sendMessage(MessageBuilder.content(
-          ' Jag kommer posta uppdateringar från untappd-konton här! Vill du synas, kör /untappd följt med ditt användarnamn på untappd'));
+          ' I will post untappd updates to this channel! Ask your users to register their username with /untappd followed by their untappd username.'));
     }
   }
 }
