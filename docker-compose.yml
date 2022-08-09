@@ -1,0 +1,12 @@
+version: "3.9"
+services:
+  agent_hops:
+    container_name: agent_hops
+    restart: unless-stopped
+    build: .
+    environment:
+      ## Set your discord token here
+      - DISCORD_TOKEN=1234567890
+    volumes:
+      ## Set data path here, e.g ./my/data/path:/data
+      - ./data:/data

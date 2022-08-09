@@ -1,7 +1,11 @@
+import 'package:hive/hive.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:nyxx/nyxx.dart';
 import 'dart:io';
+
+import 'constants/hive_constants.dart';
+import 'untapped_service.dart';
 
 Future<Map<String, dynamic>> httpGetRequest(String getURL) async {
   final response = await http.get(Uri.parse(getURL));
@@ -64,4 +68,31 @@ Future<void> unsubUser(INyxxWebsocket bot, Snowflake userSnowflake) async {
 Future<void> subUser(Snowflake userSnowflake) async {
   var myFile = File('sub.dat');
   await myFile.writeAsString(userSnowflake.toString(), mode: FileMode.append);
+}
+
+Future<bool> isUserUntappdRegistered(Snowflake userSnowflake) async {
+  var box = await Hive.box(HiveConstants.untappdBox);
+  Map<String, String> userList =
+      box.get(HiveConstants.untappdUserList, defaultValue: {});
+  return userList.keys.contains(userSnowflake);
+}
+
+Future<bool> regUntappdUser(
+    Snowflake userSnowflake, String untappdUsername) async {
+  try {
+    var box = await Hive.box(HiveConstants.untappdBox);
+
+    if (!await UntappdService.isValidUsername(untappdUsername)) {
+      print('No checkins available for user, ignoring add.');
+      return false;
+    }
+
+    var currentList = box.get(HiveConstants.untappdUserList, defaultValue: {});
+    currentList.addAll({userSnowflake.toString(): untappdUsername});
+    await box.put(HiveConstants.untappdUserList, currentList);
+    print('Saved ${currentList.toString()} to Hive box!');
+    return true;
+  } catch (e) {
+    return false;
+  }
 }
