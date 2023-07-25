@@ -22,6 +22,10 @@ class BeerAgentModule extends BotModule {
   late INyxxWebsocket _bot;
 
   static final BeerAgentModule _singleton = BeerAgentModule._internal();
+  @deprecated
+
+  /// Systembevakningsagenten.se is no longer available due to legal issues.
+  /// See https://systembevakningsagenten.se/ for more information.
   factory BeerAgentModule() {
     return _singleton;
   }

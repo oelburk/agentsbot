@@ -4,7 +4,6 @@ import 'package:nyxx/nyxx.dart';
 import 'package:nyxx_interactions/nyxx_interactions.dart';
 
 import 'commands.dart';
-import 'modules/beer_agent/beer_agent_module.dart';
 import 'modules/untappd/untapped_module.dart';
 
 String BOT_TOKEN = Platform.environment['DISCORD_TOKEN'] ?? '';
@@ -32,6 +31,5 @@ void main(List<String> arguments) {
   });
 
   // Initialize bot modules
-  BeerAgentModule().init(bot);
   UntappdModule().init(bot);
 }
