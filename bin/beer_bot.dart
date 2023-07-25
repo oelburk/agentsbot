@@ -1,22 +1,17 @@
 import 'dart:async';
+import 'dart:io';
+
 import 'package:hive/hive.dart';
 import 'package:nyxx/nyxx.dart';
-import 'package:http/http.dart' as http;
 import 'package:nyxx_interactions/nyxx_interactions.dart';
-import 'dart:convert';
-import 'dart:io';
-import 'beer.dart';
-import 'beerlist.dart';
+
 import 'commands.dart';
 import 'constants/hive_constants.dart';
-import 'untapped_service.dart';
-import 'utils.dart';
-import 'package:intl/intl.dart';
+import 'modules/beer_agent/beer_agent_module.dart';
+import 'modules/untappd/untapped_service.dart';
 
 String BOT_TOKEN = Platform.environment['DISCORD_TOKEN'] ?? '';
-late final Stopwatch ELAPSED_SINCE_UPDATE;
-List<BeerList> BEER_SALES = <BeerList>[];
-int REFRESH_THRESHOLD = 14400000;
+
 late final INyxxWebsocket bot;
 
 void main(List<String> arguments) {
@@ -38,19 +33,18 @@ void main(List<String> arguments) {
 
   interactions.syncOnReady();
 
-  ELAPSED_SINCE_UPDATE = Stopwatch();
-
   bot.eventsWs.onReady.listen((e) {
     print('Agent Hops is ready!');
   });
 
-  Timer.periodic(Duration(hours: 6), (timer) => updateSubscribers());
+  // Initialize bot modules
+  BeerAgentModule().init(bot);
 
   Timer.periodic(Duration(minutes: 12), (timer) => checkUntappd());
 }
 
 void checkUntappd() async {
-  var box = await Hive.box(HiveConstants.untappdBox);
+  var box = Hive.box(HiveConstants.untappdBox);
 
   Map<dynamic, dynamic> listOfUsers =
       await box.get(HiveConstants.untappdUserList, defaultValue: {});
@@ -124,98 +118,4 @@ String _buildRatingEmoji(double rating) {
     ratingString += ':beer: ';
   }
   return '$ratingString ($rating)';
-}
-
-Future<void> updateSubscribers() async {
-  await requestBeer();
-
-  var myFile = File('sub.dat');
-  var shouldInform = false;
-  var beers = <Beer>[];
-  var saleDate;
-
-  if (!await myFile.exists()) return;
-
-  for (var sale in BEER_SALES) {
-    saleDate = DateTime.parse(sale.saleDate);
-    var currentDate =
-        DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
-    if (saleDate.difference(currentDate).inDays == 1) {
-      //Inform subscribing users about upcoming sale...
-      shouldInform = true;
-      print('Sale is going down!');
-      beers = sale.beerList;
-      break;
-    }
-    //No sale is closer than 1 day -> do nothing...
-  }
-
-  if (shouldInform) {
-    for (var dmchannel in await getSubChannels(bot)) {
-      var beersStr = '';
-      beers.forEach((element) {
-        beersStr += '- ' + element.name + '\n';
-      });
-
-      var updateMessage = MessageBuilder()
-        ..append(':beers: Hey!')
-        ..appendNewLine()
-        ..append('There is a fresh beer release tomorrow, ')
-        ..appendBold(DateFormat('yyyy-MM-dd').format(saleDate))
-        ..append('. Bolaget opens 10:00')
-        ..appendNewLine()
-        ..append('There are ')
-        ..appendBold(beers.length.toString())
-        ..append(' new beers tomorrow.')
-        ..appendNewLine()
-        ..append('For more info, visit https://systembevakningsagenten.se/')
-        ..appendNewLine()
-        ..appendNewLine()
-        ..append(beersStr);
-
-      //To avoid hitting maximum characters for a message, limit output to 2000.
-      if (updateMessage.toString().length > 2000) {
-        updateMessage.content =
-            updateMessage.content.substring(0, 1992) + '...\n\n';
-      }
-      await dmchannel.sendMessage(updateMessage);
-    }
-  } else {
-    print('No sale, boring...');
-  }
-}
-
-Future requestBeer() async {
-  //Only update list if older than 4 hours or empty
-  if (ELAPSED_SINCE_UPDATE.elapsedMilliseconds > REFRESH_THRESHOLD ||
-      BEER_SALES.isEmpty) {
-    ELAPSED_SINCE_UPDATE.stop();
-    print('Updating beer releases and beers...');
-    final list = await fetchBeerList();
-    BEER_SALES.clear();
-    for (var item in list['release']) {
-      BEER_SALES.add(BeerList.fromJson(item));
-    }
-    ELAPSED_SINCE_UPDATE.reset();
-    ELAPSED_SINCE_UPDATE.start();
-  } else {
-    print('No update needed, requires update in ' +
-        (((REFRESH_THRESHOLD - ELAPSED_SINCE_UPDATE.elapsedMilliseconds) /
-                    1000) ~/
-                60)
-            .toString() +
-        ' minutes.');
-  }
-}
-
-Future<Map<String, dynamic>> fetchBeerList() async {
-  final response = await http.get(Uri.parse(
-      'https://systembevakningsagenten.se/api/json/2.0/newProducts.json'));
-
-  if (response.statusCode == 200) {
-    Map<String, dynamic> res = json.decode(response.body);
-    return res;
-  } else {
-    throw Exception('Error fetching beer information');
-  }
 }
