@@ -200,7 +200,6 @@ class BeerAgentModule extends BotModule {
     await myFile.writeAsString(userSnowflake.toString(), mode: FileMode.append);
   }
 
-  /// Initializes the beer agent service.
   @override
   void init(INyxxWebsocket bot) {
     _bot = bot;
@@ -212,7 +211,6 @@ class BeerAgentModule extends BotModule {
     _isInitialized = true;
   }
 
-  /// Returns a list of all slash commands for the beer agent module.
   @override
   List<SlashCommandBuilder> get commands => [
         SlashCommandBuilder(
@@ -253,7 +251,6 @@ class BeerAgentModule extends BotModule {
           }),
       ];
 
-  /// Returns a help message for the beer agent module.
   @override
   MessageBuilder get helpMessage => MessageBuilder()
     ..appendBold('/oel')
