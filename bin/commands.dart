@@ -1,7 +1,6 @@
 import 'package:nyxx/nyxx.dart';
 import 'package:nyxx_interactions/nyxx_interactions.dart';
 
-import 'modules/beer_agent/beer_agent_module.dart';
 import 'modules/untappd/untapped_module.dart';
 
 class Commands {
@@ -14,7 +13,6 @@ class Commands {
             await event.acknowledge();
             await _helpCommand(event);
           }),
-        ...BeerAgentModule().commands,
         ...UntappdModule().commands,
       ];
 
@@ -23,9 +21,6 @@ class Commands {
       ..append(ctx.interaction.userAuthor!.mention)
       ..appendNewLine()
       ..append(_mainHelpMessage)
-      ..appendNewLine()
-      ..appendNewLine()
-      ..append(BeerAgentModule().helpMessage)
       ..appendNewLine()
       ..appendNewLine()
       ..append(UntappdModule().helpMessage);

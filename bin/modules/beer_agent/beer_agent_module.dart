@@ -216,47 +216,51 @@ class BeerAgentModule extends BotModule {
   }
 
   @override
-  List<SlashCommandBuilder> get commands => [
-        SlashCommandBuilder(
-          'oel',
-          'Show the latest beer releases.',
-          [],
-        )..registerHandler((event) async {
-            await event.acknowledge();
-            await _oelCommand(event);
-          }),
-        SlashCommandBuilder(
-          'subscribe',
-          'Subscribe to beer release reminders.',
-          [],
-        )..registerHandler((event) async {
-            await event.acknowledge();
-            await _regCommand(event);
-          }),
-        SlashCommandBuilder(
-          'stop',
-          'Unsubscribe to beer release reminders.',
-          [],
-        )..registerHandler((event) async {
-            await event.acknowledge();
-            await _stopCommand(event);
-          }),
-        SlashCommandBuilder(
-          'release',
-          'Detailed info about a specific beer release e.g. /release 2022-07-15',
-          [
-            CommandOptionBuilder(
-                CommandOptionType.string, 'datum', 'YYYY-MM-dd',
-                required: true),
-          ],
-        )..registerHandler((event) async {
-            await event.acknowledge();
-            await _releaseCommand(event);
-          }),
-      ];
+  List<SlashCommandBuilder> get commands => !_isInitialized
+      ? throw Exception('Beer agent module not initialized!')
+      : [
+          SlashCommandBuilder(
+            'oel',
+            'Show the latest beer releases.',
+            [],
+          )..registerHandler((event) async {
+              await event.acknowledge();
+              await _oelCommand(event);
+            }),
+          SlashCommandBuilder(
+            'subscribe',
+            'Subscribe to beer release reminders.',
+            [],
+          )..registerHandler((event) async {
+              await event.acknowledge();
+              await _regCommand(event);
+            }),
+          SlashCommandBuilder(
+            'stop',
+            'Unsubscribe to beer release reminders.',
+            [],
+          )..registerHandler((event) async {
+              await event.acknowledge();
+              await _stopCommand(event);
+            }),
+          SlashCommandBuilder(
+            'release',
+            'Detailed info about a specific beer release e.g. /release 2022-07-15',
+            [
+              CommandOptionBuilder(
+                  CommandOptionType.string, 'datum', 'YYYY-MM-dd',
+                  required: true),
+            ],
+          )..registerHandler((event) async {
+              await event.acknowledge();
+              await _releaseCommand(event);
+            }),
+        ];
 
   @override
-  MessageBuilder get helpMessage => MessageBuilder()
+  MessageBuilder get helpMessage => !_isInitialized
+      ? throw Exception('Beer agent not initialized!')
+      : MessageBuilder()
     ..appendBold('/oel')
     ..appendNewLine()
     ..append('Lists all known beer releases.')

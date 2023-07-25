@@ -208,32 +208,36 @@ class UntappdModule extends BotModule {
   }
 
   @override
-  List<SlashCommandBuilder> get commands => [
-        SlashCommandBuilder(
-          'untappd',
-          'Let me know your untappd username so I can post automatic updates from your untappd account.',
-          [
-            CommandOptionBuilder(CommandOptionType.string, 'username',
-                'e.g. cornholio (kontot måste minst ha 1 incheckning)',
-                required: true),
-          ],
-        )..registerHandler((event) async {
-            await event.acknowledge();
-            await _untappdCommand(event);
-          }),
-        SlashCommandBuilder(
-          'setup',
-          'Setup the bot to post untappd updates to the current channel.',
-          [],
-          requiredPermissions: PermissionsConstants.administrator,
-        )..registerHandler((event) async {
-            await event.acknowledge();
-            await _setupUntappdServiceCommand(event);
-          }),
-      ];
+  List<SlashCommandBuilder> get commands => !_isInitialized
+      ? throw Exception('Untappd module not initialized!')
+      : [
+          SlashCommandBuilder(
+            'untappd',
+            'Let me know your untappd username so I can post automatic updates from your untappd account.',
+            [
+              CommandOptionBuilder(CommandOptionType.string, 'username',
+                  'e.g. cornholio (kontot måste minst ha 1 incheckning)',
+                  required: true),
+            ],
+          )..registerHandler((event) async {
+              await event.acknowledge();
+              await _untappdCommand(event);
+            }),
+          SlashCommandBuilder(
+            'setup',
+            'Setup the bot to post untappd updates to the current channel.',
+            [],
+            requiredPermissions: PermissionsConstants.administrator,
+          )..registerHandler((event) async {
+              await event.acknowledge();
+              await _setupUntappdServiceCommand(event);
+            }),
+        ];
 
   @override
-  MessageBuilder get helpMessage => MessageBuilder()
+  MessageBuilder get helpMessage => !_isInitialized
+      ? throw Exception('Untappd module not initialized!')
+      : MessageBuilder()
     ..appendBold('/untappd')
     ..appendNewLine()
     ..append(
