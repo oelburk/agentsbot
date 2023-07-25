@@ -1,12 +1,10 @@
 import 'dart:io';
 
-import 'package:hive/hive.dart';
 import 'package:nyxx/nyxx.dart';
 import 'package:nyxx_interactions/nyxx_interactions.dart';
 
 import 'commands.dart';
 import 'modules/beer_agent/beer_agent_module.dart';
-import 'modules/untappd/hive_constants.dart';
 import 'modules/untappd/untapped_module.dart';
 
 String BOT_TOKEN = Platform.environment['DISCORD_TOKEN'] ?? '';
@@ -14,9 +12,6 @@ String BOT_TOKEN = Platform.environment['DISCORD_TOKEN'] ?? '';
 late final INyxxWebsocket bot;
 
 void main(List<String> arguments) {
-  Hive.init('/data');
-  Hive.openBox(HiveConstants.untappdBox);
-
   bot =
       NyxxFactory.createNyxxWebsocket(BOT_TOKEN, GatewayIntents.allUnprivileged)
         ..registerPlugin(Logging())

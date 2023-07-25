@@ -194,6 +194,10 @@ class UntappdModule extends BotModule {
   @override
   void init(INyxxWebsocket bot,
       {Duration updateInterval = const Duration(minutes: 12)}) {
+    // Set up Hive for local data storage
+    Hive.init('/data');
+    Hive.openBox(HiveConstants.untappdBox);
+
     _bot = bot;
 
     // Start timer to check for untappd updates
