@@ -12,9 +12,16 @@ import 'models/untappd_checkin.dart';
 part 'commands.dart';
 
 class UntappdModule extends BotModule {
+  static final UntappdModule _singleton = UntappdModule._internal();
+
   bool _isInitialized = false;
 
   late INyxxWebsocket _bot;
+
+  factory UntappdModule() {
+    return _singleton;
+  }
+  UntappdModule._internal();
 
   /// Fetches and updates untappd checkins for all users
   void _checkUntappd() async {
