@@ -55,7 +55,7 @@ class UntappdService {
           : checkinCommentElement.first.trim();
 
       final photo = webScraper.getElementAttribute(
-          '$baseCheckinAddress > p.photo > a > img', 'data-original');
+          '$baseCheckinAddress > p.photo > a > img', 'src');
       final checkinPhotoAddress = photo.isNotEmpty ? photo.first : null;
 
       return UntappdCheckin(
