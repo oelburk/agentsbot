@@ -22,8 +22,6 @@ void main(List<String> arguments) async {
             plugins: [commands],
           ));
 
-  //interactions.syncOnReady();
-
   bot.onReady.listen((ReadyEvent e) {
     print('Agent Hops is ready!');
   });

@@ -4,6 +4,7 @@ import 'package:nyxx_commands/nyxx_commands.dart';
 import 'modules/untappd/untapped_module.dart';
 
 class Commands {
+  /// Get all commands available for the bot
   static List<ChatCommand> getCommands() => [
         ChatCommand(
           'help',
@@ -12,6 +13,7 @@ class Commands {
             await _helpCommand(ctx);
           },
         ),
+        // Add all commands from the modules here
         ...UntappdModule().commands,
       ];
 
