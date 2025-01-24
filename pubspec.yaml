@@ -7,6 +7,7 @@ environment:
   sdk: ">=3.0.0 <4.0.0"
 
 dependencies:
+  cron: ^0.5.1
   hive: ^2.2.3
   intl: ^0.18.1
   nyxx: ^5.1.0
