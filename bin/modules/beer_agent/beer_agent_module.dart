@@ -5,7 +5,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:nyxx/nyxx.dart';
-import 'package:nyxx_interactions/nyxx_interactions.dart';
+import 'package:nyxx_commands/nyxx_commands.dart';
 
 import '../bot_module.dart';
 import 'models/beer.dart';
@@ -19,7 +19,7 @@ class BeerAgentModule extends BotModule {
 
   bool _isInitialized = false;
 
-  late INyxxWebsocket _bot;
+  late NyxxGateway _bot;
 
   static final BeerAgentModule _singleton = BeerAgentModule._internal();
 
@@ -56,34 +56,32 @@ class BeerAgentModule extends BotModule {
     }
 
     if (shouldInform) {
-      for (var dmchannel in await _getSubChannels(_bot)) {
+      for (var userDmChannel in await _getSubbedUsers(_bot)) {
         var beersStr = '';
         beers.forEach((element) {
           beersStr += '- ' + element.name + '\n';
         });
 
-        var updateMessage = MessageBuilder()
-          ..append(':beers: Hey!')
-          ..appendNewLine()
-          ..append('There is a fresh beer release tomorrow, ')
-          ..appendBold(DateFormat('yyyy-MM-dd').format(saleDate))
-          ..append('. Bolaget opens 10:00')
-          ..appendNewLine()
-          ..append('There are ')
-          ..appendBold(beers.length.toString())
-          ..append(' new beers tomorrow.')
-          ..appendNewLine()
-          ..append('For more info, visit https://systembevakningsagenten.se/')
-          ..appendNewLine()
-          ..appendNewLine()
-          ..append(beersStr);
+        var updateMessage = MessageBuilder(
+          content: ':beers: Hey!'
+              '\n'
+              'There is a fresh beer release tomorrow, '
+              '${DateFormat('yyyy-MM-dd').format(saleDate)}. Bolaget opens 10:00'
+              '\n'
+              'There are ${beers.length} new beers tomorrow.'
+              '\n'
+              'For more info, visit https://systembevakningsagenten.se/'
+              '\n\n'
+              '$beersStr',
+        );
 
         //To avoid hitting maximum characters for a message, limit output to 2000.
-        if (updateMessage.toString().length > 2000) {
-          updateMessage.content =
-              updateMessage.content.substring(0, 1992) + '...\n\n';
+        final content = updateMessage.content;
+        if (content != null && content.toString().length > 2000) {
+          updateMessage.content = content.substring(0, 1992) + '...\n\n';
         }
-        await dmchannel.sendMessage(updateMessage);
+
+        await userDmChannel.sendMessage(updateMessage);
       }
     } else {
       print('No sale, boring...');
@@ -103,24 +101,21 @@ class BeerAgentModule extends BotModule {
     }
   }
 
-  /// Returns a list of all channels (users) that are subscribed to beer updates.
-  Future<List<IDMChannel>> _getSubChannels(INyxxWebsocket bot) async {
+  /// Returns a list of all users that are subscribed to beer updates.
+  Future<List<DmChannel>> _getSubbedUsers(NyxxGateway bot) async {
     var myFile = File('sub.dat');
-    var channelList = <IDMChannel>[];
+    var userList = <DmChannel>[];
 
     var fileExists = await myFile.exists();
     if (!fileExists) await myFile.create();
 
     await myFile.readAsLines().then((value) async {
       for (var line in value) {
-        var chan = await bot
-            .fetchChannel(Snowflake(line))
-            .then((value) => (value as IDMChannel));
-
-        channelList.add(chan);
+        var chan = await bot.channels.fetch(Snowflake(int.parse(line)));
+        userList.add(chan as DmChannel);
       }
     });
-    return channelList;
+    return userList;
   }
 
   /// Updates the list of beer sales.
@@ -159,9 +154,9 @@ class BeerAgentModule extends BotModule {
       throw Exception('Beer agent service not initialized!');
     }
 
-    var subs = await _getSubChannels(_bot);
+    var subs = await _getSubbedUsers(_bot);
 
-    if (subs.asSnowflakes().contains(userSnowflake)) {
+    if (subs.map((elemet) => elemet.id).contains(userSnowflake)) {
       return true;
     } else {
       return false;
@@ -175,7 +170,7 @@ class BeerAgentModule extends BotModule {
       throw Exception('Beer agent service not initialized!');
     }
 
-    var currentSubs = await _getSubChannels(_bot);
+    var currentSubs = await _getSubbedUsers(_bot);
 
     currentSubs.removeWhere((element) => element.id == userSnowflake);
     var tempFile = File('temp.dat');
@@ -204,7 +199,7 @@ class BeerAgentModule extends BotModule {
   }
 
   @override
-  void init(INyxxWebsocket bot) {
+  void init(NyxxGateway bot) {
     _bot = bot;
     _elapsedSinceUpdate = Stopwatch();
     _elapsedSinceUpdate.start();
@@ -215,67 +210,63 @@ class BeerAgentModule extends BotModule {
   }
 
   @override
-  List<SlashCommandBuilder> get commands => !_isInitialized
+  List<ChatCommand> get commands => !_isInitialized
       ? throw Exception('Beer agent module not initialized!')
       : [
-          SlashCommandBuilder(
+          ChatCommand(
             'oel',
             'Show the latest beer releases.',
-            [],
-          )..registerHandler((event) async {
-              await event.acknowledge();
-              await _oelCommand(event);
-            }),
-          SlashCommandBuilder(
+            (ChatContext ctx) async {
+              await _oelCommand(ctx);
+            },
+          ),
+          ChatCommand(
             'subscribe',
             'Subscribe to beer release reminders.',
-            [],
-          )..registerHandler((event) async {
-              await event.acknowledge();
-              await _regCommand(event);
-            }),
-          SlashCommandBuilder(
+            (ChatContext ctx) async {
+              await _regCommand(ctx, _bot);
+            },
+          ),
+          ChatCommand(
             'stop',
             'Unsubscribe to beer release reminders.',
-            [],
-          )..registerHandler((event) async {
-              await event.acknowledge();
-              await _stopCommand(event);
-            }),
-          SlashCommandBuilder(
+            (ChatContext ctx) async {
+              await _stopCommand(ctx);
+            },
+          ),
+          ChatCommand(
             'release',
             'Detailed info about a specific beer release e.g. /release 2022-07-15',
-            [
-              CommandOptionBuilder(
-                  CommandOptionType.string, 'datum', 'YYYY-MM-dd',
-                  required: true),
-            ],
-          )..registerHandler((event) async {
-              await event.acknowledge();
-              await _releaseCommand(event);
-            }),
+            (ChatContext ctx,
+                [@Name('date')
+                @Description('The date of the release in the format YYYY-MM-dd')
+                String? date]) async {
+              if (date == null) {
+                await ctx.respond(MessageBuilder(
+                    content: 'Please provide a date in the format YYYY-MM-dd'));
+                return;
+              }
+              await _releaseCommand(ctx);
+            },
+          )
         ];
 
   @override
   MessageBuilder get helpMessage => !_isInitialized
       ? throw Exception('Beer agent not initialized!')
-      : MessageBuilder()
-    ..appendBold('/oel')
-    ..appendNewLine()
-    ..append('Lists all known beer releases.')
-    ..appendNewLine()
-    ..appendNewLine()
-    ..appendBold('/subscribe')
-    ..appendNewLine()
-    ..append(
-        'Subscribe to automatic beer release reminders. Reminders will be posted 3 times during the day before release.')
-    ..appendNewLine()
-    ..appendNewLine()
-    ..appendBold('/release YYYY-MM-dd')
-    ..appendNewLine()
-    ..append(
-        'Posts the beer release for given date in the format YYYY-MM-dd. e.g ')
-    ..appendItalics('/release 1970-01-30');
+      : MessageBuilder(
+          content:
+              'Beer agent module is active! Here are the available commands:'
+              '\n\n'
+              '/oel\n'
+              'Lists all known beer releases.'
+              '\n\n'
+              '/subscribe\n'
+              'Subscribe to automatic beer release reminders. Reminders will be posted 3 times during the day before release.'
+              '\n\n'
+              '/release YYYY-MM-dd\n'
+              'Posts the beer release for given date in the format YYYY-MM-dd. e.g */release 1970-01-30*',
+        );
 
   /// Returns a list of all current beer sales.
   List<BeerList> get beerSales => _beerSales;

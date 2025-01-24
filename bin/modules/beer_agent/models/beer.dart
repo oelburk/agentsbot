@@ -1,7 +1,5 @@
 import 'dart:math';
 
-import 'package:nyxx/nyxx.dart';
-
 class Beer {
   final int id;
   final int sysid;
@@ -41,8 +39,7 @@ class Beer {
         score = Random().nextInt(100);
 
   String buildBeerMessage() {
-    var title = MessageDecoration.underline.format(
-        MessageDecoration.bold.format(name + ' ' + alcohol_vol + '%\n'));
+    var title = (name + ' ' + alcohol_vol + '%\n');
     return title;
   }
 }
