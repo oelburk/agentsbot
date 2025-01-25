@@ -13,7 +13,13 @@ class BeerizerService {
 
   final bool _isInitialized = false;
 
-  Future<List<BeerizerBeer>> scrapeBeer(DateTime date) async {
+  List<BeerizerBeer> _beers = [];
+
+  /// List of latest beers scraped from Beerizer
+  List<BeerizerBeer> get beers => _beers;
+
+  /// Scrape the given date's beers from Beerizer
+  Future<void> scrapeBeer(DateTime date) async {
     var formattedDate = date.toIso8601String().substring(0, 10);
     var webScraper = WebScraper();
     await webScraper
@@ -38,6 +44,13 @@ class BeerizerService {
       final scrapedName = webScraper.getElementTitle(beerTitleAddress);
       final beerName = _cleanUpName(scrapedName.first);
 
+      // Get the brewery of the beer
+      var beerBreweryAddress =
+          'div.beers > div.beer-table > div#beer-$latestCheckin > div.beer-inner-top > div.left-col > div.left-col-inner > div.left-col-topper > div.left-top > div.beer-name > a.beer-title > span.brewery-title';
+      final scrapedBrewery = webScraper.getElementTitle(beerBreweryAddress);
+      print(scrapedBrewery);
+      final beerBrewery = _cleanUpName(scrapedBrewery.first);
+
       // Get the price of the beer
       var beerPriceAdress =
           'div.beers > div.beer-table > div#beer-$latestCheckin > div.beer-inner-top > div.left-col > div.left-col-inner > div.mid-col > div.mid-price-col';
@@ -53,12 +66,13 @@ class BeerizerService {
 
       var value = BeerizerBeer(
         name: beerName,
+        brewery: beerBrewery,
         price: beerPrice,
         untappdRating: double.parse(untappdRating),
       );
       beers.add(value);
     }
-    return beers;
+    _beers = beers;
   }
 
   String _cleanUpName(String name) {

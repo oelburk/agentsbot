@@ -222,50 +222,47 @@ class UntappdModule extends BotModule {
   }
 
   @override
-  List<ChatCommand> get commands => !_isInitialized
-      ? throw Exception('Untappd module not initialized!')
-      : [
-          ChatCommand('untappd',
-              'Let me know your untappd username so I can post automatic updates from your untappd account.',
-              (ChatContext context) async {
-            await _untappdCommand(context);
-          }),
-          ChatCommand(
-            'untappd',
+  List<ChatCommand> get commands => [
+        ChatCommand('untappd',
             'Let me know your untappd username so I can post automatic updates from your untappd account.',
-            (
-              ChatContext context, [
-              @Description(
-                  'e.g. cornholio (kontot måste minst ha 1 incheckning)')
-              String? username,
-            ]) async {
-              if (username == null) {
-                await context.respond(MessageBuilder(
-                    content: 'Are you drunk buddy? Your username is missing.'));
-                return;
-              }
-              await _untappdCommand(context);
-            },
-            options: CommandOptions(
-              autoAcknowledgeInteractions: true,
-              type: CommandType.slashOnly,
-            ),
-          ),
-          ChatCommand(
-            'setup',
-            'Setup the bot to post untappd updates to the current channel.',
             (ChatContext context) async {
-              context.member?.permissions?.isAdministrator ?? false
-                  ? await _setupUntappdServiceCommand(context)
-                  : await context.respond(MessageBuilder(
-                      content: 'Only admins can issue this command!'));
-            },
-            options: CommandOptions(
-              autoAcknowledgeInteractions: true,
-              type: CommandType.slashOnly,
-            ),
+          await _untappdCommand(context);
+        }),
+        ChatCommand(
+          'untappd',
+          'Let me know your untappd username so I can post automatic updates from your untappd account.',
+          (
+            ChatContext context, [
+            @Description('e.g. cornholio (kontot måste minst ha 1 incheckning)')
+            String? username,
+          ]) async {
+            if (username == null) {
+              await context.respond(MessageBuilder(
+                  content: 'Are you drunk buddy? Your username is missing.'));
+              return;
+            }
+            await _untappdCommand(context);
+          },
+          options: CommandOptions(
+            autoAcknowledgeInteractions: true,
+            type: CommandType.slashOnly,
           ),
-        ];
+        ),
+        ChatCommand(
+          'setup',
+          'Setup the bot to post untappd updates to the current channel.',
+          (ChatContext context) async {
+            context.member?.permissions?.isAdministrator ?? false
+                ? await _setupUntappdServiceCommand(context)
+                : await context.respond(MessageBuilder(
+                    content: 'Only admins can issue this command!'));
+          },
+          options: CommandOptions(
+            autoAcknowledgeInteractions: true,
+            type: CommandType.slashOnly,
+          ),
+        ),
+      ];
 
   @override
   MessageBuilder get helpMessage => !_isInitialized

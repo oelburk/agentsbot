@@ -4,6 +4,7 @@ import 'package:nyxx/nyxx.dart';
 import 'package:nyxx_commands/nyxx_commands.dart';
 
 import 'commands.dart';
+import 'modules/beerizer/beerizer_module.dart';
 import 'modules/untappd/untapped_module.dart';
 
 String BOT_TOKEN = Platform.environment['DISCORD_TOKEN'] ?? '';
@@ -28,4 +29,5 @@ void main(List<String> arguments) async {
 
   // Initialize bot modules
   UntappdModule().init(bot);
+  BeerizerModule().init(bot);
 }

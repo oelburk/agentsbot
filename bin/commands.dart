@@ -1,6 +1,7 @@
 import 'package:nyxx/nyxx.dart';
 import 'package:nyxx_commands/nyxx_commands.dart';
 
+import 'modules/beerizer/beerizer_module.dart';
 import 'modules/untappd/untapped_module.dart';
 
 class Commands {
@@ -15,6 +16,7 @@ class Commands {
         ),
         // Add all commands from the modules here
         ...UntappdModule().commands,
+        ...BeerizerModule().commands,
       ];
 
   static Future<void> _helpCommand(ChatContext ctx) async {
