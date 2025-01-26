@@ -59,7 +59,7 @@ class BeerizerModule extends BotModule {
   void _postBeerListToChannel(InteractionChatContext? context,
       TextChannel? channel, List<BeerizerBeer> beers, DateTime date) async {
     var beerString =
-        'Beers releasing ${date.toIso8601String().substring(0, 10)}\n\n';
+        'Beers releasing ${date.toIso8601String().substring(0, 10)} :beers:\n\n';
     if (DateTime.now().isAtSameMomentAs(date)) {
       beerString = 'Woho! New beers are releasing today! :beers:\n\n';
     }
