@@ -8,4 +8,4 @@ RUN dart pub get
 COPY . .
 
 #Run bot
-CMD ["dart", "bin/beer_bot.dart"]
+CMD ["dart", "bin/main.dart"]
