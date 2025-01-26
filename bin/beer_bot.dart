@@ -32,7 +32,7 @@ class BeerBot {
     });
 
     // Initialize bot modules
-    UntappdModule().init(bot, shouldPersistData: false);
+    UntappdModule().init(bot);
     BeerizerModule().init(bot);
   }
 }
