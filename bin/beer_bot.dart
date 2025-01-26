@@ -1,32 +1,28 @@
 import 'dart:io';
 
 import 'package:nyxx/nyxx.dart';
-import 'package:nyxx_interactions/nyxx_interactions.dart';
+import 'package:nyxx_commands/nyxx_commands.dart';
 
 import 'commands.dart';
 import 'modules/untappd/untapped_module.dart';
 
 String BOT_TOKEN = Platform.environment['DISCORD_TOKEN'] ?? '';
 
-late final INyxxWebsocket bot;
+// late final INyxxWebsocket bot;
 
-void main(List<String> arguments) {
-  bot =
-      NyxxFactory.createNyxxWebsocket(BOT_TOKEN, GatewayIntents.allUnprivileged)
-        ..registerPlugin(Logging())
-        ..registerPlugin(CliIntegration())
-        ..registerPlugin(IgnoreExceptions())
-        ..connect();
-
-  final interactions = IInteractions.create(WebsocketInteractionBackend(bot));
-
+void main(List<String> arguments) async {
+  final commands = CommandsPlugin(prefix: mentionOr((_) => '!'));
   Commands.getCommands().forEach((command) {
-    interactions.registerSlashCommand(command);
+    commands.addCommand(command);
   });
 
-  interactions.syncOnReady();
+  final bot =
+      await Nyxx.connectGateway('<TOKEN>', GatewayIntents.allUnprivileged,
+          options: GatewayClientOptions(
+            plugins: [commands],
+          ));
 
-  bot.eventsWs.onReady.listen((e) {
+  bot.onReady.listen((ReadyEvent e) {
     print('Agent Hops is ready!');
   });
 

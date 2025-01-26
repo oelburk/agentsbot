@@ -2,19 +2,20 @@ name: Agent_S
 description: The Dart Discord bot for beer lovers in Sweden.
 version: 1.0.0
 homepage: https://github.com/oelburk/agentsbot
+publish_to: none
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
 
 dependencies:
   hive: ^2.2.3
-  intl: ^0.18.1
-  nyxx: ^5.1.0
-  nyxx_commands: ^5.0.2
-  nyxx_interactions: ^4.6.0
-  web_scraper: ^0.1.4
+  intl: ^0.20.2
+  nyxx: ^6.5.2
+  nyxx_commands: ^6.0.3
+  web_scraper:
+    git: https://github.com/oelburk/web_scraper.git
 
 dev_dependencies:
-  lints: ^2.1.1
+  lints: ^5.1.1
   test: ^1.24.4
   pedantic: ^1.11.1

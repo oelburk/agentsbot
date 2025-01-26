@@ -1,50 +1,48 @@
 part of 'beer_agent_module.dart';
 
-Future<void> _regCommand(ISlashCommandInteractionEvent ctx) async {
-  var dmChan = await ctx.interaction.userAuthor!.dmChannel;
+Future<void> _regCommand(ChatContext ctx, NyxxGateway bot) async {
+  var user = ctx.user.id;
 
-  if (await BeerAgentModule()._isUserSubbed(dmChan.id)) {
-    await ctx.respond(MessageBuilder.content(
-        ctx.interaction.userAuthor!.mention +
-            ' You are already subscribed! :beers:'));
+  if (await BeerAgentModule()._isUserSubbed(user)) {
+    await ctx.respond(
+      MessageBuilder(content: 'You are already subscribed! :beers:'),
+      level: ResponseLevel.private,
+    );
   } else {
-    await BeerAgentModule()._subUser(dmChan.id);
+    final dmChannel = await bot.user.manager.createDm(user);
+    await BeerAgentModule()._subUser(dmChannel.id);
 
-    await ctx.respond(MessageBuilder.content(
-        ctx.interaction.userAuthor!.mention +
-            ' You are now subscribed to beer release reminders! :beers:'));
+    await ctx.respond(
+      MessageBuilder(
+          content: 'You are now subscribed to beer release reminders! :beers:'),
+      level: ResponseLevel.private,
+    );
   }
 }
 
-Future<void> _stopCommand(ISlashCommandInteractionEvent ctx) async {
-  var dmChan = await ctx.interaction.userAuthor!.dmChannel;
+Future<void> _stopCommand(ChatContext ctx) async {
+  var user = ctx.user.id;
 
-  if (await BeerAgentModule()._isUserSubbed(dmChan.id)) {
-    await BeerAgentModule()._unsubUser(dmChan.id);
+  if (await BeerAgentModule()._isUserSubbed(user)) {
+    await BeerAgentModule()._unsubUser(user);
 
-    await ctx.respond(MessageBuilder.content(
-        ctx.interaction.userAuthor!.mention +
-            ' Sad, no more beer for you! :beers:'));
+    await ctx.respond(
+        MessageBuilder(content: 'Sad, no more beer for you! :beers:'),
+        level: ResponseLevel.private);
   } else {
-    await ctx.respond(MessageBuilder.content(
-        ctx.interaction.userAuthor!.mention +
-            ' You are not subscribed! :beers:'));
+    await ctx.respond(
+        MessageBuilder(content: 'You are not subscribed! :beers:'),
+        level: ResponseLevel.private);
   }
 }
 
-Future<void> _oelCommand(ISlashCommandInteractionEvent ctx) async {
+Future<void> _oelCommand(ChatContext ctx) async {
   //Updates current beer list if needed
   await BeerAgentModule()._updateBeerSales();
 
   //Build message
-  var oelMessage = MessageBuilder()
-    ..append(ctx.interaction.userAuthor!.mention)
-    ..appendNewLine()
-    ..append('There are ')
-    ..appendBold(BeerAgentModule().beerSales.length.toString())
-    ..append(' current releases!')
-    ..appendNewLine()
-    ..appendNewLine();
+  var message = 'There are '
+      '${BeerAgentModule().beerSales.length} current releases!\n\n';
 
   for (var beerSale in BeerAgentModule().beerSales) {
     var saleDate = beerSale.saleDate;
@@ -52,77 +50,37 @@ Future<void> _oelCommand(ISlashCommandInteractionEvent ctx) async {
     beerSale.beerList.shuffle();
 
     if (saleSize >= 3) {
-      oelMessage
-        ..append(':beer: ')
-        ..appendBold(saleDate)
-        ..appendNewLine()
-        ..append('This release has ')
-        ..appendBold(saleSize)
-        ..append(' new beers!')
-        ..appendNewLine()
-        ..appendNewLine()
-        ..append('Some of them are:')
-        ..appendNewLine()
-        ..append('- ')
-        ..appendBold(beerSale.beerList[0].name)
-        ..appendNewLine()
-        ..append('- ')
-        ..appendBold(beerSale.beerList[1].name)
-        ..appendNewLine()
-        ..append('- ')
-        ..appendBold(beerSale.beerList[2].name)
-        ..appendNewLine()
-        ..appendNewLine();
+      message = ':beer: $saleDate\n'
+          'This release has $saleSize new beers!\n\n'
+          'Some of them are:\n'
+          '- ${beerSale.beerList[0].name}\n'
+          '- ${beerSale.beerList[1].name}\n'
+          '- ${beerSale.beerList[2].name}\n\n';
     } else if (saleSize == 2) {
-      oelMessage
-        ..append(':beer: ')
-        ..appendBold(saleDate)
-        ..appendNewLine()
-        ..append('This release has ')
-        ..appendBold(saleSize)
-        ..append(' new beers!')
-        ..appendNewLine()
-        ..appendNewLine()
-        ..append('Some of them are:')
-        ..appendNewLine()
-        ..append('- ')
-        ..appendBold(beerSale.beerList[0].name)
-        ..appendNewLine()
-        ..append('- ')
-        ..appendBold(beerSale.beerList[1].name)
-        ..appendNewLine()
-        ..appendNewLine();
+      message = ':beer: $saleDate\n'
+          'This release has $saleSize new beers!\n\n'
+          'Some of them are:\n'
+          '- ${beerSale.beerList[0].name}\n'
+          '- ${beerSale.beerList[1].name}\n\n';
     } else if (saleSize == 1) {
-      oelMessage
-        ..append(':beer: ')
-        ..appendBold(saleDate)
-        ..appendNewLine()
-        ..append('This release has ')
-        ..appendBold(saleSize)
-        ..append(' new beer!')
-        ..appendNewLine()
-        ..appendNewLine()
-        ..append('- ')
-        ..appendBold(beerSale.beerList[0].name)
-        ..appendNewLine()
-        ..appendNewLine();
+      message = ':beer: $saleDate\n'
+          'This release has $saleSize new beer!\n\n'
+          '- ${beerSale.beerList[0].name}\n\n';
     }
+
+    var oelMessage = MessageBuilder(
+        content: '$message\n'
+            '---\n'
+            'For more information: https://systembevakningsagenten.se/\n'
+            'Cheers! :beers:');
+
+    //Send message
+    await ctx.respond(oelMessage);
   }
-
-  oelMessage
-    ..append('---')
-    ..appendNewLine()
-    ..append('For more information: https://systembevakningsagenten.se/')
-    ..appendNewLine()
-    ..appendNewLine()
-    ..append('Cheers! :beers:');
-
-  //Send message
-  await ctx.respond(oelMessage);
 }
 
-Future<void> _releaseCommand(ISlashCommandInteractionEvent ctx) async {
-  var input = ctx.args;
+Future<void> _releaseCommand(ChatContext ctx) async {
+  var input = ctx.arguments;
   if (input.length == 1) {
     var parsedDate = DateTime.tryParse(input[0].value);
 
@@ -139,38 +97,31 @@ Future<void> _releaseCommand(ISlashCommandInteractionEvent ctx) async {
           });
 
           //Bulild reply
-          var slappMessage = MessageBuilder()
-            ..append(ctx.interaction.userAuthor!.mention)
-            ..appendNewLine()
-            ..append(' :beers: ')
-            ..appendBold(input[0].value)
-            ..appendNewLine()
-            ..append('Innehåller ')
-            ..appendBold(sale.beerList.length)
-            ..append(' nya öl:')
-            ..appendNewLine()
-            ..appendNewLine()
-            ..append(beerStr);
+          var slappMessage = MessageBuilder(
+              content:
+                  ':beers: Ölsläpp för ${DateFormat('yyyy-MM-dd').format(parsedDate)}'
+                  ' nya öl:'
+                  '\n\n'
+                  '$beerStr');
 
-          if (slappMessage.content.length > 2000) {
-            slappMessage.content = slappMessage.content.substring(
-                    0,
-                    slappMessage.content.substring(0, 1999).lastIndexOf('- ') -
-                        1) +
+          final content = slappMessage.content;
+
+          if (content!.length > 2000) {
+            slappMessage.content = content.substring(
+                    0, content.substring(0, 1999).lastIndexOf('- ') - 1) +
                 '\n...';
           }
           await ctx.respond(slappMessage);
           return;
         }
       }
-      await ctx.respond(MessageBuilder.content(
-          ctx.interaction.userAuthor!.mention +
-              ' Fanns inget ölsläpp för ' +
+      await ctx.respond(MessageBuilder(
+          content: 'Fanns inget ölsläpp för ' +
               DateFormat('yyyy-MM-dd').format(parsedDate)));
       return;
     }
   }
 
-  await ctx.respond(MessageBuilder.content(ctx.interaction.userAuthor!.mention +
-      ' Are you drunk buddy? I only accept ***/release YYYY-MM-dd***'));
+  await ctx.respond(MessageBuilder(
+      content: 'Are you drunk buddy? I only accept ***/release YYYY-MM-dd***'));
 }

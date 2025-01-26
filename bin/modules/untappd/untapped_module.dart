@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:hive/hive.dart';
 import 'package:nyxx/nyxx.dart';
-import 'package:nyxx_interactions/nyxx_interactions.dart';
+import 'package:nyxx_commands/nyxx_commands.dart';
 import 'package:web_scraper/web_scraper.dart';
 
 import '../bot_module.dart';
@@ -16,7 +16,7 @@ class UntappdModule extends BotModule {
 
   bool _isInitialized = false;
 
-  late INyxxWebsocket _bot;
+  late NyxxGateway _bot;
 
   factory UntappdModule() {
     return _singleton;
@@ -31,7 +31,7 @@ class UntappdModule extends BotModule {
     }
     var box = Hive.box(HiveConstants.untappdBox);
 
-    Map<dynamic, dynamic> listOfUsers =
+    Map<int, String> listOfUsers =
         await box.get(HiveConstants.untappdUserList, defaultValue: {});
     var latestCheckins = await box
         .get(HiveConstants.untappdLatestUserCheckins, defaultValue: {});
@@ -59,35 +59,41 @@ class UntappdModule extends BotModule {
               HiveConstants.untappdLatestUserCheckins, latestCheckins);
 
           // Build update message with info from untappd checkin
-          var user = await _bot.fetchUser(Snowflake(userSnowflake));
+          var user = await _bot.users.fetch(Snowflake(userSnowflake));
           var embedBuilder = EmbedBuilder();
           embedBuilder.title = '${user.username} is drinking beer!';
-          embedBuilder.url =
-              _getCheckinUrl(latestCheckinUntappd.id, untappdUsername);
+          embedBuilder.url = Uri.dataFromString(
+              _getCheckinUrl(latestCheckinUntappd.id, untappdUsername));
           embedBuilder.description = latestCheckinUntappd.title;
           if (latestCheckinUntappd.comment.isNotEmpty) {
-            embedBuilder.addField(
-                field:
-                    EmbedFieldBuilder('Comment', latestCheckinUntappd.comment));
+            embedBuilder.fields?.add(EmbedFieldBuilder(
+                name: 'Comment',
+                value: latestCheckinUntappd.comment,
+                isInline: false));
           }
           if (latestCheckinUntappd.rating.isNotEmpty) {
-            embedBuilder.addField(
-                field: EmbedFieldBuilder(
-                    'Rating',
-                    _buildRatingEmoji(
-                        double.parse(latestCheckinUntappd.rating))));
+            embedBuilder.fields?.add(
+              EmbedFieldBuilder(
+                name: 'Rating',
+                value: _buildRatingEmoji(
+                  double.parse(latestCheckinUntappd.rating),
+                ),
+                isInline: false,
+              ),
+            );
           }
           if (latestCheckinUntappd.photoAddress != null) {
-            embedBuilder.imageUrl = latestCheckinUntappd.photoAddress;
+            embedBuilder.image?.url =
+                Uri.dataFromString(latestCheckinUntappd.photoAddress!);
           }
 
           // Get channel used for untappd updates, previously set by discord admin.
-          var updateChannel = await _bot
-              .fetchChannel(Snowflake(updateChannelId))
-              .then((value) => (value as ITextChannel));
+          var updateChannel = await _bot.channels
+              .fetch(Snowflake(updateChannelId)) as PartialTextChannel;
 
           // Send update message
-          await updateChannel.sendMessage(MessageBuilder.embed(embedBuilder));
+          await updateChannel
+              .sendMessage(MessageBuilder(embeds: [embedBuilder]));
         }
         // Sleep 5 seconds per user to avoid suspicious requests to untappd server
         await Future.delayed(Duration(seconds: 5));
@@ -149,6 +155,7 @@ class UntappdModule extends BotModule {
   /// Get latest checkin for given untapped username
   Future<UntappdCheckin?> _getLatestCheckin(String untappdUsername) async {
     final webScraper = WebScraper('https://untappd.com');
+
     if (await webScraper.loadWebPage('/user/$untappdUsername')) {
       final checkins = webScraper.getElementAttribute(
           'div#main-stream > *', 'data-checkin-id');
@@ -199,7 +206,7 @@ class UntappdModule extends BotModule {
       'https://untappd.com/user/$username/checkin/$checkinId';
 
   @override
-  void init(INyxxWebsocket bot,
+  void init(NyxxGateway bot,
       {Duration updateInterval = const Duration(minutes: 12)}) {
     // Set up Hive for local data storage
     Hive.init('/data');
@@ -215,44 +222,62 @@ class UntappdModule extends BotModule {
   }
 
   @override
-  List<SlashCommandBuilder> get commands => !_isInitialized
+  List<ChatCommand> get commands => !_isInitialized
       ? throw Exception('Untappd module not initialized!')
       : [
-          SlashCommandBuilder(
+          ChatCommand('untappd',
+              'Let me know your untappd username so I can post automatic updates from your untappd account.',
+              (ChatContext context) async {
+            await _untappdCommand(context);
+          }),
+          ChatCommand(
             'untappd',
             'Let me know your untappd username so I can post automatic updates from your untappd account.',
-            [
-              CommandOptionBuilder(CommandOptionType.string, 'username',
-                  'e.g. cornholio (kontot måste minst ha 1 incheckning)',
-                  required: true),
-            ],
-          )..registerHandler((event) async {
-              await event.acknowledge();
-              await _untappdCommand(event);
-            }),
-          SlashCommandBuilder(
+            (
+              ChatContext context, [
+              @Description(
+                  'e.g. cornholio (kontot måste minst ha 1 incheckning)')
+              String? username,
+            ]) async {
+              if (username == null) {
+                await context.respond(MessageBuilder(
+                    content: 'Are you drunk buddy? Your username is missing.'));
+                return;
+              }
+              await _untappdCommand(context);
+            },
+            options: CommandOptions(
+              autoAcknowledgeInteractions: true,
+              type: CommandType.slashOnly,
+            ),
+          ),
+          ChatCommand(
             'setup',
             'Setup the bot to post untappd updates to the current channel.',
-            [],
-            requiredPermissions: PermissionsConstants.administrator,
-          )..registerHandler((event) async {
-              await event.acknowledge();
-              await _setupUntappdServiceCommand(event);
-            }),
+            (ChatContext context) async {
+              context.member?.permissions?.isAdministrator ?? false
+                  ? await _setupUntappdServiceCommand(context)
+                  : await context.respond(MessageBuilder(
+                      content: 'Only admins can issue this command!'));
+            },
+            options: CommandOptions(
+              autoAcknowledgeInteractions: true,
+              type: CommandType.slashOnly,
+            ),
+          ),
         ];
 
   @override
   MessageBuilder get helpMessage => !_isInitialized
       ? throw Exception('Untappd module not initialized!')
-      : MessageBuilder()
-    ..appendBold('/untappd')
-    ..appendNewLine()
-    ..append(
-        'Registers your untappd username so I can post automatic updates based on your untappd checkins.')
-    ..appendNewLine()
-    ..appendNewLine()
-    ..appendBold('/setup')
-    ..appendNewLine()
-    ..append(
-        'Setup the bot to post untappd updates to the current channel. (Only admins can issue this command.)');
+      : MessageBuilder(
+          content: '**Untappd Module**\n\n'
+              'This module allows you to post automatic updates from your untappd account.'
+              '\n\n'
+              '**Commands**\n'
+              '/untappd\n'
+              'Registers your untappd username so I can post automatic updates based on your untappd checkins.\n\n'
+              '/setup\n'
+              'Setup the bot to post untappd updates to the current channel. (Only admins can issue this command.)',
+        );
 }
