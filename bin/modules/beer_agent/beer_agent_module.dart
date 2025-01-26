@@ -216,28 +216,28 @@ class BeerAgentModule extends BotModule {
           ChatCommand(
             'oel',
             'Show the latest beer releases.',
-            (ChatContext ctx) async {
+            (InteractionChatContext ctx) async {
               await _oelCommand(ctx);
             },
           ),
           ChatCommand(
             'subscribe',
             'Subscribe to beer release reminders.',
-            (ChatContext ctx) async {
+            (InteractionChatContext ctx) async {
               await _regCommand(ctx, _bot);
             },
           ),
           ChatCommand(
             'stop',
             'Unsubscribe to beer release reminders.',
-            (ChatContext ctx) async {
+            (InteractionChatContext ctx) async {
               await _stopCommand(ctx);
             },
           ),
           ChatCommand(
             'release',
             'Detailed info about a specific beer release e.g. /release 2022-07-15',
-            (ChatContext ctx,
+            (InteractionChatContext ctx,
                 [@Name('date')
                 @Description('The date of the release in the format YYYY-MM-dd')
                 String? date]) async {
@@ -252,21 +252,17 @@ class BeerAgentModule extends BotModule {
         ];
 
   @override
-  MessageBuilder get helpMessage => !_isInitialized
-      ? throw Exception('Beer agent not initialized!')
-      : MessageBuilder(
-          content:
-              'Beer agent module is active! Here are the available commands:'
-              '\n\n'
-              '/oel\n'
-              'Lists all known beer releases.'
-              '\n\n'
-              '/subscribe\n'
-              'Subscribe to automatic beer release reminders. Reminders will be posted 3 times during the day before release.'
-              '\n\n'
-              '/release YYYY-MM-dd\n'
-              'Posts the beer release for given date in the format YYYY-MM-dd. e.g */release 1970-01-30*',
-        );
+  String get helpMessage =>
+      'Beer agent module is active! Here are the available commands:'
+      '\n\n'
+      '/oel\n'
+      'Lists all known beer releases.'
+      '\n\n'
+      '/subscribe\n'
+      'Subscribe to automatic beer release reminders. Reminders will be posted 3 times during the day before release.'
+      '\n\n'
+      '/release YYYY-MM-dd\n'
+      'Posts the beer release for given date in the format YYYY-MM-dd. e.g */release 1970-01-30*';
 
   /// Returns a list of all current beer sales.
   List<BeerList> get beerSales => _beerSales;

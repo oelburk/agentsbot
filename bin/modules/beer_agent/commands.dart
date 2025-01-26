@@ -1,6 +1,6 @@
 part of 'beer_agent_module.dart';
 
-Future<void> _regCommand(ChatContext ctx, NyxxGateway bot) async {
+Future<void> _regCommand(InteractionChatContext ctx, NyxxGateway bot) async {
   var user = ctx.user.id;
 
   if (await BeerAgentModule()._isUserSubbed(user)) {
@@ -20,7 +20,7 @@ Future<void> _regCommand(ChatContext ctx, NyxxGateway bot) async {
   }
 }
 
-Future<void> _stopCommand(ChatContext ctx) async {
+Future<void> _stopCommand(InteractionChatContext ctx) async {
   var user = ctx.user.id;
 
   if (await BeerAgentModule()._isUserSubbed(user)) {
@@ -36,7 +36,7 @@ Future<void> _stopCommand(ChatContext ctx) async {
   }
 }
 
-Future<void> _oelCommand(ChatContext ctx) async {
+Future<void> _oelCommand(InteractionChatContext ctx) async {
   //Updates current beer list if needed
   await BeerAgentModule()._updateBeerSales();
 
@@ -79,7 +79,7 @@ Future<void> _oelCommand(ChatContext ctx) async {
   }
 }
 
-Future<void> _releaseCommand(ChatContext ctx) async {
+Future<void> _releaseCommand(InteractionChatContext ctx) async {
   var input = ctx.arguments;
   if (input.length == 1) {
     var parsedDate = DateTime.tryParse(input[0].value);

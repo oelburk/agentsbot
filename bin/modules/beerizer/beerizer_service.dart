@@ -18,8 +18,7 @@ class BeerizerService {
   /// List of latest beers scraped from Beerizer
   List<BeerizerBeer> get beers => _beers;
 
-  /// Scrape the given date's beers from Beerizer
-  Future<void> scrapeBeer(DateTime date) async {
+  Future<List<BeerizerBeer>> _scrape(DateTime date) async {
     var formattedDate = date.toIso8601String().substring(0, 10);
     var webScraper = WebScraper();
     await webScraper
@@ -31,7 +30,7 @@ class BeerizerService {
     print(checkins);
 
     if (checkins.isEmpty) {
-      throw 'No beers are available for today';
+      return [];
     }
 
     var beers = <BeerizerBeer>[];
@@ -72,7 +71,16 @@ class BeerizerService {
       );
       beers.add(value);
     }
-    _beers = beers;
+    return beers;
+  }
+
+  /// Scrape the given date's beers from Beerizer
+  Future<void> scrapeBeer(DateTime date) async {
+    _beers = await _scrape(date);
+  }
+
+  Future<List<BeerizerBeer>> quickScrape(String date) async {
+    return await _scrape(DateTime.parse(date));
   }
 
   String _cleanUpName(String name) {

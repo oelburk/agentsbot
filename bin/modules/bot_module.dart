@@ -9,5 +9,5 @@ abstract class BotModule {
   List<ChatCommand> get commands;
 
   /// Returns the help message for the module
-  MessageBuilder get helpMessage;
+  String get helpMessage;
 }

@@ -1,8 +1,8 @@
 part of 'untapped_module.dart';
 
-Future<void> _untappdCommand(ChatContext ctx) async {
-  var box = Hive.box(HiveConstants.untappdBox);
-  if (box.get(HiveConstants.untappdUpdateChannelId) == null) {
+Future<void> _untappdCommand(InteractionChatContext ctx) async {
+  final updateChannelId = await UntappdModule().updateChannelId;
+  if (updateChannelId == null) {
     await ctx.respond(MessageBuilder(
         content: 'Whops, ask your admin to run setup first! :beers:'));
     return;
@@ -12,7 +12,8 @@ Future<void> _untappdCommand(ChatContext ctx) async {
         content: 'Are you drunk buddy? Your username is missing.'));
   }
   var discordUser = ctx.user.id;
-  var untappdUsername = ctx.arguments.first.value;
+
+  var untappdUsername = ctx.arguments.first as String;
 
   if (!await UntappdModule()._regUntappdUser(discordUser, untappdUsername)) {
     await ctx.respond(
@@ -22,16 +23,12 @@ Future<void> _untappdCommand(ChatContext ctx) async {
       content: 'From now on I will post your updates from untappd! :beers:'));
 }
 
-Future<void> _setupUntappdServiceCommand(ChatContext ctx) async {
-  if (ctx.member?.permissions?.isAdministrator ?? false) {
-    var beerUpdateChannel = ctx.channel;
+Future<void> _setupUntappdServiceCommand(InteractionChatContext ctx) async {
+  var beerUpdateChannel = ctx.channel;
 
-    var box = Hive.box(HiveConstants.untappdBox);
-    await box.put(
-        HiveConstants.untappdUpdateChannelId, beerUpdateChannel.id.toString());
+  UntappdModule().setUpdateChannelId(beerUpdateChannel.id);
 
-    await beerUpdateChannel.sendMessage(MessageBuilder(
-        content:
-            ' I will post untappd updates to this channel! Ask your users to register their username with /untappd followed by their untappd username.'));
-  }
+  await ctx.respond(MessageBuilder(
+      content:
+          ' I will post untappd updates to this channel! Ask your users to register their username with /untappd followed by their untappd username.'));
 }

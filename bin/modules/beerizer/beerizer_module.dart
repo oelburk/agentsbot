@@ -8,6 +8,7 @@ import 'package:nyxx_commands/nyxx_commands.dart';
 
 import '../bot_module.dart';
 import 'beerizer_service.dart';
+import 'models/beerizer_beer.dart';
 
 part 'commands.dart';
 
@@ -32,6 +33,12 @@ class BeerizerModule extends BotModule {
     _isInitialized = true;
   }
 
+  void _scrapeDate(String date, InteractionChatContext context) async {
+    final beers = await BeerizerService().quickScrape(date);
+    if (beers.isEmpty) {}
+    _postBeerListToChannel(context, null, beers, DateTime.parse(date));
+  }
+
   void _startScraping() async {
     await BeerizerService().scrapeBeer(DateTime.now());
     _cron = Cron();
@@ -39,7 +46,7 @@ class BeerizerModule extends BotModule {
       Timer(Duration(minutes: Random().nextInt(90)), () async {
         await BeerizerService().scrapeBeer(DateTime.now());
         if (_channel != null) {
-          _postLatestBeersToChannel(_channel!);
+          _postLatestBeersToChannel(null, _channel!);
         }
       });
     });
@@ -49,19 +56,33 @@ class BeerizerModule extends BotModule {
     _cron.close();
   }
 
-  void _postLatestBeersToChannel(TextChannel channel) async {
+  void _postBeerListToChannel(InteractionChatContext? context,
+      TextChannel? channel, List<BeerizerBeer> beers, DateTime date) async {
+    var beerString =
+        'Beers releasing ${date.toIso8601String().substring(0, 10)}\n\n';
+    if (DateTime.now().isAtSameMomentAs(date)) {
+      beerString = 'Woho! New beers are releasing today! :beers:\n\n';
+    }
+    for (var beer in beers) {
+      beerString += '**${beer.name}**\n'
+          '${beer.brewery}\n'
+          '<:untappd:1333124979386220604> ${beer.untappdRating} :star:\n'
+          '\n';
+    }
+    if (channel != null) {
+      await channel.sendMessage(MessageBuilder(content: beerString));
+    } else {
+      await context!.respond(MessageBuilder(content: beerString));
+    }
+  }
+
+  void _postLatestBeersToChannel(
+      InteractionChatContext? context, TextChannel? channel) async {
     var latestBeerList = BeerizerService().beers;
     if (latestBeerList.isEmpty) {
       return;
     }
-    var beerString = 'Woho! New beers are releasing today! :beers:\n\n';
-    for (var beer in latestBeerList) {
-      beerString += '**${beer.name}**\n'
-          '${beer.brewery}\n'
-          ':untappd: ${beer.untappdRating} :star:\n'
-          '\n\n';
-    }
-    await channel.sendMessage(MessageBuilder(content: beerString));
+    _postBeerListToChannel(context, channel, latestBeerList, DateTime.now());
   }
 
   @override
@@ -69,7 +90,7 @@ class BeerizerModule extends BotModule {
         _buildCommand(
           'start',
           'Start checking for beer.',
-          (ChatContext context) async {
+          (InteractionChatContext context) async {
             _startScraping();
             await context.respond(MessageBuilder(
                 content:
@@ -88,7 +109,7 @@ class BeerizerModule extends BotModule {
         _buildCommand(
           'stop',
           'Stop checking for beer.',
-          (ChatContext context) async {
+          (InteractionChatContext context) async {
             _stopScraping();
             await context.respond(
               MessageBuilder(content: 'Stopped checking for beer releases.'),
@@ -98,7 +119,7 @@ class BeerizerModule extends BotModule {
         _buildCommand(
           'check',
           'Check the latest beer.',
-          (ChatContext context) async {
+          (InteractionChatContext context) async {
             var latestBeerList = BeerizerService().beers;
             if (latestBeerList.isEmpty) {
               await context.respond(MessageBuilder(
@@ -106,19 +127,34 @@ class BeerizerModule extends BotModule {
                       'Sadly no beers are releasing for today, I\'ll keep checking.'));
               return;
             }
-            _postLatestBeersToChannel(context.channel);
+            _postLatestBeersToChannel(context, null);
           },
         ),
+        _buildCommand(
+            'check-date', 'Check if there are any beer releases on given date.',
+            (InteractionChatContext context,
+                [@Name('date')
+                @Description('Date to check, provide as YYYY-MM-dd')
+                String? date]) async {
+          if (date == null) {
+            await context.respond(MessageBuilder(
+                content: 'Please provide a date in the format YYYY-MM-dd'));
+            return;
+          }
+          _scrapeDate(date, context);
+          await context.acknowledge();
+        }),
       ];
 
   @override
-  MessageBuilder get helpMessage {
+  String get helpMessage {
     // Return the help message for the module
-    return MessageBuilder(
-        content: '**Beerizer module**\n\n'
-            'Commands:\n\n'
-            'start - Start checking for beer releases\n'
-            'stop - Stop checking for beer releases\n'
-            'check - Check the latest beer releases');
+    return '**Beerizer module**\n'
+        'This module allows you to automatically check the latest beer releases from Beerizer.\n\n'
+        'Commands:\n'
+        '`/start` - Begin tracking beer releases and automatically share updates in the channel where the command was used.\n'
+        '`/stop` - Stop the automatic tracking of beer releases.\n'
+        '`/check` - Check the latest beer releases\n'
+        '`/quick` - Check if there are any beer releases on given date.';
   }
 }
