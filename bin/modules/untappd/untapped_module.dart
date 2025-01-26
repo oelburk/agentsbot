@@ -1,13 +1,15 @@
 import 'dart:async';
 
-import 'package:hive/hive.dart';
+// import 'package:hive/hive.dart';
 import 'package:nyxx/nyxx.dart';
 import 'package:nyxx_commands/nyxx_commands.dart';
 import 'package:web_scraper/web_scraper.dart';
 
 import '../bot_module.dart';
-import 'hive_constants.dart';
 import 'models/untappd_checkin.dart';
+import 'repository/data_repository.dart';
+import 'repository/hive_data_repository.dart';
+import 'repository/in_memory_data_repository.dart';
 
 part 'commands.dart';
 
@@ -17,11 +19,83 @@ class UntappdModule extends BotModule {
   bool _isInitialized = false;
 
   late NyxxGateway _bot;
+  late final DataRepository _repository;
+
+  bool persistData = true;
 
   factory UntappdModule() {
     return _singleton;
   }
   UntappdModule._internal();
+
+  @override
+  void init(NyxxGateway bot,
+      {Duration updateInterval = const Duration(minutes: 12),
+      bool shouldPersistData = true}) async {
+    persistData = shouldPersistData;
+
+    _repository = persistData ? HiveDataRepository() : InMemoryDataRepository();
+    await _repository.init();
+
+    _bot = bot;
+
+    // Start timer to check for untappd updates
+    Timer.periodic(updateInterval, (timer) => _checkUntappd());
+
+    // Set module as initialized
+    _isInitialized = true;
+  }
+
+  @override
+  List<ChatCommand> get commands => [
+        ChatCommand(
+          'untappd',
+          'Let me know your untappd username so I can post automatic updates from your untappd account.',
+          (
+            InteractionChatContext context, [
+            @Description('e.g. cornholio (kontot måste minst ha 1 incheckning)')
+            String? username,
+          ]) async {
+            if (username == null) {
+              await context.respond(MessageBuilder(
+                  content: 'Are you drunk buddy? Your username is missing.'));
+              return;
+            }
+            await _untappdCommand(context);
+          },
+          options: CommandOptions(
+            autoAcknowledgeInteractions: true,
+            type: CommandType.slashOnly,
+          ),
+        ),
+        ChatCommand(
+          'setup',
+          'Setup the bot to post untappd updates to the current channel.',
+          (InteractionChatContext context) async {
+            context.member?.permissions?.isAdministrator ?? false
+                ? await _setupUntappdServiceCommand(context)
+                : await context.respond(MessageBuilder(
+                    content: 'Only admins can issue this command!'));
+          },
+          options: CommandOptions(
+            autoAcknowledgeInteractions: true,
+            type: CommandType.slashOnly,
+          ),
+        ),
+      ];
+
+  @override
+  String get helpMessage => '**Untappd Module**\n'
+      'This module allows you to post automatic updates from your untappd account.'
+      '\n\n'
+      'Commands:\n'
+      '`/untappd` - '
+      'Registers your untappd username so I can post automatic updates based on your untappd checkins.\n'
+      '`/setup` - '
+      'Setup the bot to post untappd updates to the current channel. (Only admins can issue this command.)';
+
+  Future<int?> get updateChannelId async =>
+      await _repository.getUpdateChannelId();
 
   /// Fetches and updates untappd checkins for all users
   void _checkUntappd() async {
@@ -29,21 +103,20 @@ class UntappdModule extends BotModule {
       print('Untappd module not initialized!');
       throw Exception('Untappd module not initialized!');
     }
-    var box = Hive.box(HiveConstants.untappdBox);
 
-    Map<int, String> listOfUsers =
-        await box.get(HiveConstants.untappdUserList, defaultValue: {});
-    var latestCheckins = await box
-        .get(HiveConstants.untappdLatestUserCheckins, defaultValue: {});
-
-    var updateChannelId = await box.get(HiveConstants.untappdUpdateChannelId);
+    final listOfUsers = await _repository.getUserList();
+    final latestCheckins = await _repository.getLatestCheckins();
+    final updateChannelId = await _repository.getUpdateChannelId();
 
     if (updateChannelId == null) {
       print('No channel available for updates!');
       return;
     }
 
-    if (listOfUsers.isEmpty) print('No users available to scrape!');
+    if (listOfUsers.isEmpty) {
+      print('No users available to scrape!');
+      return;
+    }
 
     listOfUsers.forEach((userSnowflake, untappdUsername) async {
       var latestCheckinDisk = latestCheckins[untappdUsername];
@@ -54,9 +127,8 @@ class UntappdModule extends BotModule {
         if (latestCheckinUntappd != null &&
             latestCheckinDisk != latestCheckinUntappd.id) {
           // Update latest saved checkin
-          latestCheckins.addAll({untappdUsername: latestCheckinUntappd.id});
-          await box.put(
-              HiveConstants.untappdLatestUserCheckins, latestCheckins);
+          latestCheckins[untappdUsername] = latestCheckinUntappd.id;
+          await _repository.setLatestCheckins(latestCheckins);
 
           // Build update message with info from untappd checkin
           var user = await _bot.users.fetch(Snowflake(userSnowflake));
@@ -65,12 +137,14 @@ class UntappdModule extends BotModule {
           embedBuilder.url = Uri.dataFromString(
               _getCheckinUrl(latestCheckinUntappd.id, untappdUsername));
           embedBuilder.description = latestCheckinUntappd.title;
+
           if (latestCheckinUntappd.comment.isNotEmpty) {
             embedBuilder.fields?.add(EmbedFieldBuilder(
                 name: 'Comment',
                 value: latestCheckinUntappd.comment,
                 isInline: false));
           }
+
           if (latestCheckinUntappd.rating.isNotEmpty) {
             embedBuilder.fields?.add(
               EmbedFieldBuilder(
@@ -82,6 +156,7 @@ class UntappdModule extends BotModule {
               ),
             );
           }
+
           if (latestCheckinUntappd.photoAddress != null) {
             embedBuilder.image?.url =
                 Uri.dataFromString(latestCheckinUntappd.photoAddress!);
@@ -116,17 +191,14 @@ class UntappdModule extends BotModule {
   Future<bool> _regUntappdUser(
       Snowflake userSnowflake, String untappdUsername) async {
     try {
-      var box = Hive.box(HiveConstants.untappdBox);
-
       if (!await _isValidUsername(untappdUsername)) {
         print('No checkins available for user, ignoring add.');
         return false;
       }
 
-      var currentList =
-          box.get(HiveConstants.untappdUserList, defaultValue: {});
-      currentList.addAll({userSnowflake.toString(): untappdUsername});
-      await box.put(HiveConstants.untappdUserList, currentList);
+      var currentList = await _repository.getUserList();
+      currentList[userSnowflake.value] = untappdUsername;
+      await _repository.setUserList(currentList);
       print('Saved ${currentList.toString()} to Hive box!');
       return true;
     } catch (e) {
@@ -205,79 +277,7 @@ class UntappdModule extends BotModule {
   String _getCheckinUrl(String checkinId, String username) =>
       'https://untappd.com/user/$username/checkin/$checkinId';
 
-  @override
-  void init(NyxxGateway bot,
-      {Duration updateInterval = const Duration(minutes: 12)}) {
-    // Set up Hive for local data storage
-    Hive.init('/data');
-    Hive.openBox(HiveConstants.untappdBox);
-
-    _bot = bot;
-
-    // Start timer to check for untappd updates
-    Timer.periodic(updateInterval, (timer) => _checkUntappd());
-
-    // Set module as initialized
-    _isInitialized = true;
+  void setUpdateChannelId(Snowflake id) {
+    _repository.setUpdateChannelId(id.value);
   }
-
-  @override
-  List<ChatCommand> get commands => !_isInitialized
-      ? throw Exception('Untappd module not initialized!')
-      : [
-          ChatCommand('untappd',
-              'Let me know your untappd username so I can post automatic updates from your untappd account.',
-              (ChatContext context) async {
-            await _untappdCommand(context);
-          }),
-          ChatCommand(
-            'untappd',
-            'Let me know your untappd username so I can post automatic updates from your untappd account.',
-            (
-              ChatContext context, [
-              @Description(
-                  'e.g. cornholio (kontot måste minst ha 1 incheckning)')
-              String? username,
-            ]) async {
-              if (username == null) {
-                await context.respond(MessageBuilder(
-                    content: 'Are you drunk buddy? Your username is missing.'));
-                return;
-              }
-              await _untappdCommand(context);
-            },
-            options: CommandOptions(
-              autoAcknowledgeInteractions: true,
-              type: CommandType.slashOnly,
-            ),
-          ),
-          ChatCommand(
-            'setup',
-            'Setup the bot to post untappd updates to the current channel.',
-            (ChatContext context) async {
-              context.member?.permissions?.isAdministrator ?? false
-                  ? await _setupUntappdServiceCommand(context)
-                  : await context.respond(MessageBuilder(
-                      content: 'Only admins can issue this command!'));
-            },
-            options: CommandOptions(
-              autoAcknowledgeInteractions: true,
-              type: CommandType.slashOnly,
-            ),
-          ),
-        ];
-
-  @override
-  MessageBuilder get helpMessage => !_isInitialized
-      ? throw Exception('Untappd module not initialized!')
-      : MessageBuilder(
-          content: '**Untappd Module**\n\n'
-              'This module allows you to post automatic updates from your untappd account.'
-              '\n\n'
-              '**Commands**\n'
-              '/untappd\n'
-              'Registers your untappd username so I can post automatic updates based on your untappd checkins.\n\n'
-              '/setup\n'
-              'Setup the bot to post untappd updates to the current channel. (Only admins can issue this command.)',
-        );
 }

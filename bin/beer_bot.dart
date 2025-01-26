@@ -1,31 +1,38 @@
-import 'dart:io';
-
 import 'package:nyxx/nyxx.dart';
 import 'package:nyxx_commands/nyxx_commands.dart';
 
 import 'commands.dart';
+import 'modules/beerizer/beerizer_module.dart';
 import 'modules/untappd/untapped_module.dart';
 
-String BOT_TOKEN = Platform.environment['DISCORD_TOKEN'] ?? '';
+class BeerBot {
+  static final BeerBot _singleton = BeerBot._internal();
 
-// late final INyxxWebsocket bot;
+  factory BeerBot() {
+    return _singleton;
+  }
 
-void main(List<String> arguments) async {
-  final commands = CommandsPlugin(prefix: mentionOr((_) => '!'));
-  Commands.getCommands().forEach((command) {
-    commands.addCommand(command);
-  });
+  BeerBot._internal();
 
-  final bot =
-      await Nyxx.connectGateway('<TOKEN>', GatewayIntents.allUnprivileged,
-          options: GatewayClientOptions(
-            plugins: [commands],
-          ));
+  void init(String apiToken) async {
+    final commands = CommandsPlugin(prefix: mentionOr((_) => '!'));
 
-  bot.onReady.listen((ReadyEvent e) {
-    print('Agent Hops is ready!');
-  });
+    Commands.getCommands().forEach((command) {
+      commands.addCommand(command);
+    });
 
-  // Initialize bot modules
-  UntappdModule().init(bot);
+    final bot =
+        await Nyxx.connectGateway(apiToken, GatewayIntents.allUnprivileged,
+            options: GatewayClientOptions(
+              plugins: [commands],
+            ));
+
+    bot.onReady.listen((ReadyEvent e) {
+      print('Agent Hops is ready!');
+    });
+
+    // Initialize bot modules
+    UntappdModule().init(bot, shouldPersistData: false);
+    BeerizerModule().init(bot);
+  }
 }
