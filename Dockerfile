@@ -1,4 +1,4 @@
-FROM dart:2.17.1 AS build
+FROM dart:stable AS build
 
 WORKDIR /opt/app
 
