@@ -118,7 +118,7 @@ class UntappdModule extends BotModule {
       return;
     }
 
-    listOfUsers.forEach((userSnowflake, untappdUsername) async {
+    listOfUsers.forEach((untappdUsername, userSnowflake) async {
       var latestCheckinDisk = latestCheckins[untappdUsername];
       try {
         var latestCheckinUntappd = await _getLatestCheckin(untappdUsername);
@@ -197,7 +197,7 @@ class UntappdModule extends BotModule {
       }
 
       var currentList = await _repository.getUserList();
-      currentList[userSnowflake.value] = untappdUsername;
+      currentList[untappdUsername] = userSnowflake.value;
       await _repository.setUserList(currentList);
       print('Saved ${currentList.toString()} to Hive box!');
       return true;

@@ -13,14 +13,14 @@ class HiveDataRepository implements DataRepository {
   }
 
   @override
-  Future<Map<int, String>> getUserList() async {
-    return Map<int, String>.from(
+  Future<Map<String, int>> getUserList() async {
+    return Map<String, int>.from(
       _box.get(HiveConstants.untappdUserList, defaultValue: {}) as Map,
     );
   }
 
   @override
-  Future<void> setUserList(Map<int, String> users) async {
+  Future<void> setUserList(Map<String, int> users) async {
     await _box.put(HiveConstants.untappdUserList, users);
   }
 

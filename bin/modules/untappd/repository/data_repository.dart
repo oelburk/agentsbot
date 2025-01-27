@@ -1,7 +1,7 @@
 abstract class DataRepository {
   Future<void> init(); // For optional Hive init
-  Future<Map<int, String>> getUserList();
-  Future<void> setUserList(Map<int, String> users);
+  Future<Map<String, int>> getUserList();
+  Future<void> setUserList(Map<String, int> users);
 
   Future<Map<String, String>> getLatestCheckins();
   Future<void> setLatestCheckins(Map<String, String> latestCheckins);

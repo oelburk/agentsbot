@@ -1,7 +1,7 @@
 import 'data_repository.dart';
 
 class InMemoryDataRepository implements DataRepository {
-  Map<int, String> _userList = {};
+  Map<String, int> _userList = {};
   Map<String, String> _latestCheckins = {};
   int? _updateChannelId;
 
@@ -11,12 +11,12 @@ class InMemoryDataRepository implements DataRepository {
   }
 
   @override
-  Future<Map<int, String>> getUserList() async {
+  Future<Map<String, int>> getUserList() async {
     return _userList;
   }
 
   @override
-  Future<void> setUserList(Map<int, String> users) async {
+  Future<void> setUserList(Map<String, int> users) async {
     _userList = users;
   }
 
