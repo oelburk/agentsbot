@@ -67,6 +67,7 @@ class BeerizerModule extends BotModule {
       beerString += '**${beer.name}**\n'
           '${beer.brewery}\n'
           '<:untappd:1333124979386220604> ${beer.untappdRating} :star:\n'
+          '*${beer.style}*\n'
           '\n';
     }
     if (channel != null) {

@@ -63,11 +63,18 @@ class BeerizerService {
           webScraper.getElementTitle(untappdRatingAddress);
       final untappdRating = _cleanUpUntappdRating(scrapedUntappdRating.first);
 
+      // Get style of the beer
+      var beerStyleAddress =
+          'div.beers > div.beer-table > div#beer-$latestCheckin > div.beer-inner-top > div.right-col';
+      final scrapedStyle = webScraper.getElementTitle(beerStyleAddress);
+      final beerStyle = _cleanUpStyle(scrapedStyle.first);
+
       var value = BeerizerBeer(
         name: beerName,
         brewery: beerBrewery,
         price: beerPrice,
         untappdRating: untappdRating,
+        style: beerStyle,
       );
       beers.add(value);
     }
@@ -81,6 +88,18 @@ class BeerizerService {
 
   Future<List<BeerizerBeer>> quickScrape(String date) async {
     return await _scrape(DateTime.parse(date));
+  }
+
+  String _cleanUpStyle(String style) {
+    var onlyStyle = style.trim();
+    final stringlist = onlyStyle.split('\n');
+
+    onlyStyle = stringlist[17].trimLeft();
+    if (onlyStyle.isEmpty) {
+      onlyStyle = stringlist[14].trimLeft();
+    }
+
+    return onlyStyle;
   }
 
   String _cleanUpName(String name) {
