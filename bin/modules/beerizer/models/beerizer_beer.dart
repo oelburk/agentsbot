@@ -2,7 +2,7 @@ class BeerizerBeer {
   String name;
   String brewery;
   String price;
-  double untappdRating;
+  String untappdRating;
 
   BeerizerBeer({
     required this.name,

@@ -67,7 +67,7 @@ class BeerizerService {
         name: beerName,
         brewery: beerBrewery,
         price: beerPrice,
-        untappdRating: double.parse(untappdRating),
+        untappdRating: untappdRating,
       );
       beers.add(value);
     }
