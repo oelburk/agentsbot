@@ -93,18 +93,20 @@ class BeerizerModule extends BotModule {
           'Start checking for beer.',
           (InteractionChatContext context) async {
             _startScraping();
+            _channel = context.channel;
             await context.respond(MessageBuilder(
                 content:
                     'Started checking for beer releases. Updates will be posted here daily between 08:00-9:30.'));
 
             var latestBeerList = BeerizerService().beers;
             if (latestBeerList.isEmpty) {
-              await context.respond(MessageBuilder(
+              await _channel!.sendMessage(MessageBuilder(
                   content:
                       'Sadly no beers are releasing for today, I\'ll keep checking.'));
               return;
+            } else {
+              _postLatestBeersToChannel(null, _channel!);
             }
-            _channel = context.channel;
           },
         ),
         _buildCommand(
