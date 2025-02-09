@@ -47,7 +47,6 @@ class BeerizerService {
       var beerBreweryAddress =
           'div.beers > div.beer-table > div#beer-$latestCheckin > div.beer-inner-top > div.left-col > div.left-col-inner > div.left-col-topper > div.left-top > div.beer-name > a.beer-title > span.brewery-title';
       final scrapedBrewery = webScraper.getElementTitle(beerBreweryAddress);
-      print(scrapedBrewery);
       final beerBrewery = _cleanUpName(scrapedBrewery.first);
 
       // Get the price of the beer
@@ -78,6 +77,7 @@ class BeerizerService {
       );
       beers.add(value);
     }
+    print('Scraped ${beers.length} beers from Beerizer');
     return beers;
   }
 

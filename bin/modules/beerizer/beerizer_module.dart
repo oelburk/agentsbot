@@ -28,9 +28,12 @@ class BeerizerModule extends BotModule {
 
   TextChannel? _channel;
 
+  late Duration? _updateInterval;
+
   @override
-  void init(NyxxGateway bot) {
+  void init(NyxxGateway bot, {Duration? updateInterval}) async {
     _isInitialized = true;
+    _updateInterval = updateInterval;
   }
 
   void _scrapeDate(String date, InteractionChatContext context) async {
@@ -42,14 +45,43 @@ class BeerizerModule extends BotModule {
   void _startScraping() async {
     await BeerizerService().scrapeBeer(DateTime.now());
     _cron = Cron();
-    _cron.schedule(Schedule.parse('0 8 * * *'), () {
-      Timer(Duration(minutes: Random().nextInt(90)), () async {
-        await BeerizerService().scrapeBeer(DateTime.now());
-        if (_channel != null) {
-          _postLatestBeersToChannel(null, _channel!);
-        }
-      });
-    });
+    final cronString = '0 8 * * *';
+
+    if (_updateInterval != null) {
+      _scheduleScrapingWithInterval(DateTime.now());
+    } else {
+      _scheduleDailyScraping(cronString);
+    }
+  }
+
+  void _scheduleScrapingWithInterval(DateTime date) {
+    _cron.schedule(
+      Schedule.parse('*/${_updateInterval!.inMinutes} * * * *'),
+      () async {
+        Timer(Duration(seconds: Random().nextInt(5)), () async {
+          await BeerizerService().scrapeBeer(date);
+          _postToChannel();
+        });
+      },
+    );
+  }
+
+  void _scheduleDailyScraping(String cronString) {
+    _cron.schedule(
+      Schedule.parse(cronString),
+      () async {
+        Timer(Duration(minutes: Random().nextInt(90)), () async {
+          await BeerizerService().scrapeBeer(DateTime.now());
+          _postToChannel();
+        });
+      },
+    );
+  }
+
+  void _postToChannel() {
+    if (_channel != null) {
+      _postLatestBeersToChannel(null, _channel!);
+    }
   }
 
   void _stopScraping() {
