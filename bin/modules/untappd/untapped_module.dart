@@ -134,9 +134,10 @@ class UntappdModule extends BotModule {
           var user = await _bot.users.fetch(Snowflake(userSnowflake));
           var embedBuilder = EmbedBuilder();
           embedBuilder.title = '${user.username} is drinking beer!';
-          embedBuilder.url = Uri.dataFromString(
+          embedBuilder.url = Uri.parse(
               _getCheckinUrl(latestCheckinUntappd.id, untappdUsername));
           embedBuilder.description = latestCheckinUntappd.title;
+          embedBuilder.fields = [];
 
           if (latestCheckinUntappd.comment.isNotEmpty) {
             embedBuilder.fields?.add(EmbedFieldBuilder(
@@ -146,20 +147,21 @@ class UntappdModule extends BotModule {
           }
 
           if (latestCheckinUntappd.rating.isNotEmpty) {
-            embedBuilder.fields?.add(
+            final rating = double.parse(latestCheckinUntappd.rating);
+            embedBuilder.fields!.add(
               EmbedFieldBuilder(
                 name: 'Rating',
                 value: _buildRatingEmoji(
-                  double.parse(latestCheckinUntappd.rating),
+                  rating,
                 ),
-                isInline: false,
+                isInline: true,
               ),
             );
           }
 
           if (latestCheckinUntappd.photoAddress != null) {
-            embedBuilder.image?.url =
-                Uri.dataFromString(latestCheckinUntappd.photoAddress!);
+            embedBuilder.image = EmbedImageBuilder(
+                url: Uri.parse(latestCheckinUntappd.photoAddress!));
           }
 
           // Get channel used for untappd updates, previously set by discord admin.
@@ -260,7 +262,7 @@ class UntappdModule extends BotModule {
           : checkinCommentElement.first.trim();
 
       final photo = webScraper.getElementAttribute(
-          '$baseCheckinAddress > p.photo > a > img', 'data-original');
+          '$baseCheckinAddress > p.photo > a > img', 'src');
       final checkinPhotoAddress = photo.isNotEmpty ? photo.first : null;
 
       return UntappdCheckin(
