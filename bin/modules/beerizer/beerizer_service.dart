@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:web_scraper/web_scraper.dart';
 
+import '../../utils/error_monitor.dart';
 import 'models/beerizer_beer.dart';
 
 class BeerizerService {
@@ -18,111 +21,304 @@ class BeerizerService {
   /// List of latest beers scraped from Beerizer
   List<BeerizerBeer> get beers => _beers;
 
+  /// Maximum number of retry attempts for web scraping operations
+  static const int _maxRetries = 3;
+
+  /// Base delay between retries (will be exponentially increased)
+  static const Duration _baseRetryDelay = Duration(seconds: 2);
+
+  /// Scrape beers with retry logic and error handling
   Future<List<BeerizerBeer>> _scrape(DateTime date) async {
     var formattedDate = date.toIso8601String().substring(0, 10);
-    var webScraper = WebScraper();
-    await webScraper
-        .loadFullURL('https://beerizer.com/shop/systembolaget/$formattedDate');
+    var url = 'https://beerizer.com/shop/systembolaget/$formattedDate';
 
-    final checkins = webScraper.getElementAttribute(
-        'div.beers > div.beer-table > *', 'data-id');
+    // Start performance transaction
+    final transaction = startPerformanceTransaction(
+      name: 'beerizer_scrape',
+      operation: 'web_scraping',
+      description: 'Scrape beers from Beerizer for date $formattedDate',
+      data: {'date': formattedDate, 'url': url},
+    );
 
-    print(checkins);
+    try {
+      // Add breadcrumb for context
+      ErrorMonitor().addBreadcrumb(
+        message: 'Starting Beerizer scrape',
+        category: 'scraping',
+        data: {'date': formattedDate, 'url': url},
+      );
 
-    if (checkins.isEmpty) {
+      for (var attempt = 1; attempt <= _maxRetries; attempt++) {
+        try {
+          print(
+              'Beerizer: Attempting to scrape $url (attempt $attempt/$_maxRetries)');
+
+          var webScraper = WebScraper();
+          var loadSuccess = await webScraper.loadFullURL(url);
+
+          if (!loadSuccess) {
+            throw Exception('Failed to load URL: $url');
+          }
+
+          final checkins = webScraper.getElementAttribute(
+              'div.beers > div.beer-table > *', 'data-id');
+
+          print('Beerizer: Found ${checkins.length} checkins');
+
+          if (checkins.isEmpty) {
+            print('Beerizer: No beers found for date $formattedDate');
+            return [];
+          }
+
+          var beers = <BeerizerBeer>[];
+
+          for (var latestCheckin in checkins) {
+            try {
+              if (latestCheckin == null) continue;
+              var beer = await _scrapeBeerDetails(webScraper, latestCheckin);
+              if (beer != null) {
+                beers.add(beer);
+              }
+            } catch (e) {
+              e.recordError(
+                source: 'Beerizer',
+                message: 'Error scraping beer $latestCheckin',
+                severity: ErrorSeverity.medium,
+                context: {
+                  'checkinId': latestCheckin,
+                  'url': url,
+                  'attempt': attempt
+                },
+              );
+              // Continue with other beers even if one fails
+              continue;
+            }
+          }
+
+          print(
+              'Beerizer: Successfully scraped ${beers.length} beers from Beerizer');
+
+          // Add success breadcrumb
+          ErrorMonitor().addBreadcrumb(
+            message: 'Beerizer scrape completed successfully',
+            category: 'scraping',
+            data: {'beers_count': beers.length, 'date': formattedDate},
+          );
+
+          return beers;
+        } catch (e) {
+          print('Beerizer: Attempt $attempt failed: $e');
+
+          e.recordError(
+            source: 'Beerizer',
+            message: 'Scraping attempt $attempt failed',
+            severity: attempt == _maxRetries
+                ? ErrorSeverity.high
+                : ErrorSeverity.medium,
+            context: {'attempt': attempt, 'url': url, 'date': formattedDate},
+          );
+
+          if (attempt == _maxRetries) {
+            print(
+                'Beerizer: All retry attempts failed for date $formattedDate');
+            return [];
+          }
+
+          // Exponential backoff
+          var delay = Duration(
+              milliseconds:
+                  _baseRetryDelay.inMilliseconds * (1 << (attempt - 1)));
+          print('Beerizer: Retrying in ${delay.inSeconds} seconds...');
+          await Future.delayed(delay);
+        }
+      }
+
       return [];
+    } finally {
+      // Finish performance transaction
+      await transaction?.finish();
     }
+  }
 
-    var beers = <BeerizerBeer>[];
-
-    for (var latestCheckin in checkins) {
+  /// Scrape individual beer details with error handling
+  Future<BeerizerBeer?> _scrapeBeerDetails(
+      WebScraper webScraper, String checkinId) async {
+    try {
       // Get the name of the beer
       var beerTitleAddress =
-          'div.beers > div.beer-table > div#beer-$latestCheckin > div.beer-inner-top > div.left-col > div.left-col-inner > div.left-col-topper > div.left-top > div.beer-name > a.beer-title > span.title';
+          'div.beers > div.beer-table > div#beer-$checkinId > div.beer-inner-top > div.left-col > div.left-col-inner > div.left-col-topper > div.left-top > div.beer-name > a.beer-title > span.title';
 
       final scrapedName = webScraper.getElementTitle(beerTitleAddress);
+      if (scrapedName.isEmpty) {
+        print('Beerizer: Could not find beer name for checkin $checkinId');
+        return null;
+      }
       final beerName = _cleanUpName(scrapedName.first);
 
       // Get the brewery of the beer
       var beerBreweryAddress =
-          'div.beers > div.beer-table > div#beer-$latestCheckin > div.beer-inner-top > div.left-col > div.left-col-inner > div.left-col-topper > div.left-top > div.beer-name > a.beer-title > span.brewery-title';
+          'div.beers > div.beer-table > div#beer-$checkinId > div.beer-inner-top > div.left-col > div.left-col-inner > div.left-col-topper > div.left-top > div.beer-name > a.beer-title > span.brewery-title';
       final scrapedBrewery = webScraper.getElementTitle(beerBreweryAddress);
-      final beerBrewery = _cleanUpName(scrapedBrewery.first);
+      final beerBrewery = scrapedBrewery.isEmpty
+          ? 'Unknown Brewery'
+          : _cleanUpName(scrapedBrewery.first);
 
       // Get the price of the beer
       var beerPriceAdress =
-          'div.beers > div.beer-table > div#beer-$latestCheckin > div.beer-inner-top > div.left-col > div.left-col-inner > div.mid-col > div.mid-price-col';
+          'div.beers > div.beer-table > div#beer-$checkinId > div.beer-inner-top > div.left-col > div.left-col-inner > div.mid-col > div.mid-price-col';
       final scrapedTitle = webScraper.getElementTitle(beerPriceAdress);
-      final beerPrice = _cleanUpPrice(scrapedTitle.first);
+      final beerPrice =
+          scrapedTitle.isEmpty ? 'N/A' : _cleanUpPrice(scrapedTitle.first);
 
       // Get Untappd rating
       var untappdRatingAddress =
-          'div.beers > div.beer-table > div#beer-$latestCheckin > div.beer-inner-top > div.right-col';
+          'div.beers > div.beer-table > div#beer-$checkinId > div.beer-inner-top > div.right-col';
       final scrapedUntappdRating =
           webScraper.getElementTitle(untappdRatingAddress);
-      final untappdRating = _cleanUpUntappdRating(scrapedUntappdRating.first);
+      final untappdRating = scrapedUntappdRating.isEmpty
+          ? 'N/A'
+          : _cleanUpUntappdRating(scrapedUntappdRating.first);
 
       // Get style of the beer
       var beerStyleAddress =
-          'div.beers > div.beer-table > div#beer-$latestCheckin > div.beer-inner-top > div.right-col';
+          'div.beers > div.beer-table > div#beer-$checkinId > div.beer-inner-top > div.right-col';
       final scrapedStyle = webScraper.getElementTitle(beerStyleAddress);
-      final beerStyle = _cleanUpStyle(scrapedStyle.first);
+      final beerStyle = scrapedStyle.isEmpty
+          ? 'Unknown Style'
+          : _cleanUpStyle(scrapedStyle.first);
 
-      var value = BeerizerBeer(
+      return BeerizerBeer(
         name: beerName,
         brewery: beerBrewery,
         price: beerPrice,
         untappdRating: untappdRating,
         style: beerStyle,
       );
-      beers.add(value);
+    } catch (e) {
+      e.recordError(
+        source: 'Beerizer',
+        message: 'Error scraping beer details for $checkinId',
+        severity: ErrorSeverity.medium,
+        context: {'checkinId': checkinId},
+      );
+      return null;
     }
-    print('Scraped ${beers.length} beers from Beerizer');
-    return beers;
   }
 
   /// Scrape the given date's beers from Beerizer
   Future<void> scrapeBeer(DateTime date) async {
-    _beers = await _scrape(date);
+    try {
+      _beers = await _scrape(date);
+    } catch (e) {
+      e.recordError(
+        source: 'Beerizer',
+        message: 'Error in scrapeBeer',
+        severity: ErrorSeverity.high,
+        context: {'date': date.toIso8601String()},
+      );
+      print('Beerizer: Error in scrapeBeer: $e');
+      _beers = [];
+    }
   }
 
   Future<List<BeerizerBeer>> quickScrape(String date) async {
-    return await _scrape(DateTime.parse(date));
+    try {
+      return await _scrape(DateTime.parse(date));
+    } catch (e) {
+      e.recordError(
+        source: 'Beerizer',
+        message: 'Error in quickScrape',
+        severity: ErrorSeverity.high,
+        context: {'date': date},
+      );
+      print('Beerizer: Error in quickScrape: $e');
+      return [];
+    }
   }
 
   String _cleanUpStyle(String style) {
-    var onlyStyle = style.trim();
-    final stringlist = onlyStyle.split('\n');
+    try {
+      var onlyStyle = style.trim();
+      final stringlist = onlyStyle.split('\n');
 
-    onlyStyle = stringlist[17].trimLeft();
-    if (onlyStyle.isEmpty) {
-      onlyStyle = stringlist[14].trimLeft();
+      if (stringlist.length > 17) {
+        onlyStyle = stringlist[17].trimLeft();
+      } else if (stringlist.length > 14) {
+        onlyStyle = stringlist[14].trimLeft();
+      } else {
+        onlyStyle = 'Unknown Style';
+      }
+
+      return onlyStyle.isEmpty ? 'Unknown Style' : onlyStyle;
+    } catch (e) {
+      e.recordError(
+        source: 'Beerizer',
+        message: 'Error cleaning up style',
+        severity: ErrorSeverity.low,
+        context: {'style': style},
+      );
+      print('Beerizer: Error cleaning up style: $e');
+      return 'Unknown Style';
     }
-
-    return onlyStyle;
   }
 
   String _cleanUpName(String name) {
-    var onlyPrice = name.trim();
-    onlyPrice = onlyPrice.replaceAll('\n', '').trim();
+    try {
+      var onlyPrice = name.trim();
+      onlyPrice = onlyPrice.replaceAll('\n', '').trim();
 
-    final firstWhitespace = onlyPrice.indexOf('  ');
-    if (firstWhitespace != -1) {
-      onlyPrice = onlyPrice.substring(0, firstWhitespace + 1) +
-          onlyPrice.substring(firstWhitespace + 1).replaceAll(' ', '');
+      final firstWhitespace = onlyPrice.indexOf('  ');
+      if (firstWhitespace != -1) {
+        onlyPrice = onlyPrice.substring(0, firstWhitespace + 1) +
+            onlyPrice.substring(firstWhitespace + 1).replaceAll(' ', '');
+      }
+
+      return onlyPrice.isEmpty ? 'Unknown Beer' : onlyPrice;
+    } catch (e) {
+      e.recordError(
+        source: 'Beerizer',
+        message: 'Error cleaning up name',
+        severity: ErrorSeverity.low,
+        context: {'name': name},
+      );
+      print('Beerizer: Error cleaning up name: $e');
+      return 'Unknown Beer';
     }
-
-    return onlyPrice;
   }
 
   String _cleanUpPrice(String price) {
-    final onlyPrice = price.trim().substring(3);
-    final firstWhitespace = onlyPrice.indexOf(' ');
+    try {
+      if (price.length < 3) return 'N/A';
+      final onlyPrice = price.trim().substring(3);
+      final firstWhitespace = onlyPrice.indexOf(' ');
 
-    return onlyPrice.substring(0, firstWhitespace - 1).trim();
+      if (firstWhitespace == -1) return onlyPrice.trim();
+      return onlyPrice.substring(0, firstWhitespace - 1).trim();
+    } catch (e) {
+      e.recordError(
+        source: 'Beerizer',
+        message: 'Error cleaning up price',
+        severity: ErrorSeverity.low,
+        context: {'price': price},
+      );
+      print('Beerizer: Error cleaning up price: $e');
+      return 'N/A';
+    }
   }
 
   String _cleanUpUntappdRating(String rating) {
-    return rating.trim().substring(0, 5).trim();
+    try {
+      if (rating.length < 5) return 'N/A';
+      return rating.trim().substring(0, 5).trim();
+    } catch (e) {
+      e.recordError(
+        source: 'Beerizer',
+        message: 'Error cleaning up Untappd rating',
+        severity: ErrorSeverity.low,
+        context: {'rating': rating},
+      );
+      print('Beerizer: Error cleaning up Untappd rating: $e');
+      return 'N/A';
+    }
   }
 }
