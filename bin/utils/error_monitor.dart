@@ -80,9 +80,10 @@ class ErrorMonitor {
           'source': record.source,
           'severity': record.severity.name,
         },
+        timestamp: record.timestamp,
+        // ignore: deprecated_member_use
         extra: {
           'context': record.context,
-          'timestamp': record.timestamp.toIso8601String(),
         },
         user: userId != null ? SentryUser(id: userId) : null,
       );
@@ -215,6 +216,7 @@ class ErrorMonitor {
 
     try {
       Sentry.configureScope((scope) {
+        // ignore: deprecated_member_use
         scope.setExtra(key, value);
       });
     } catch (e) {

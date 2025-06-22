@@ -213,7 +213,7 @@ class UntappdModule extends BotModule {
       print('Untappd: Error in _checkUntappd: $e');
     } finally {
       // Finish performance transaction
-      transaction?.finish();
+      await transaction?.finish();
     }
   }
 

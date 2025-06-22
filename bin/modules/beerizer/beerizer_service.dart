@@ -136,7 +136,7 @@ class BeerizerService {
       return [];
     } finally {
       // Finish performance transaction
-      transaction?.finish();
+      await transaction?.finish();
     }
   }
 
