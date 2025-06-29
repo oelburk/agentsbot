@@ -550,6 +550,11 @@ class UntappdModule extends BotModule {
       );
       print('Untappd: Error getting latest checkin for $untappdUsername: $e');
       rethrow;
+    } finally {
+      // Always close the browser
+      if (browser != null) {
+        await browser.close();
+      }
     }
   }
 
