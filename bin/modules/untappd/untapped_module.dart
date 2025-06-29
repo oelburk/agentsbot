@@ -3,6 +3,7 @@ import 'dart:async';
 // import 'package:hive/hive.dart';
 import 'package:nyxx/nyxx.dart';
 import 'package:nyxx_commands/nyxx_commands.dart';
+import 'package:puppeteer/puppeteer.dart';
 import 'package:web_scraper/web_scraper.dart';
 
 import '../../utils/error_monitor.dart';
@@ -444,15 +445,56 @@ class UntappdModule extends BotModule {
 
   /// Get latest checkin for given untapped username
   Future<UntappdCheckin?> _getLatestCheckin(String untappdUsername) async {
+    Browser? browser;
     try {
-      final webScraper = WebScraper('https://untappd.com');
+      print('Untappd: Launching browser...');
+      // Launch puppeteer browser
+      browser = await puppeteer.launch(
+        headless: true,
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-accelerated-2d-canvas',
+          '--no-first-run',
+          '--no-zygote',
+          '--disable-gpu',
+        ],
+      );
 
-      var loadSuccess = await webScraper.loadWebPage('/user/$untappdUsername');
+      final page = await browser.newPage();
 
-      if (!loadSuccess) {
+      // Set user agent to mimic a real browser
+      await page.setUserAgent(
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
+
+      print('Untappd: Navigating to Untappd page for $untappdUsername...');
+      // Navigate to the untappd user page
+      final url = 'https://untappd.com/user/$untappdUsername';
+      await page.goto(url, wait: Until.networkIdle);
+
+      print('Untappd: Waiting for page to load completely...');
+      // Wait a bit longer to ensure Cloudflare challenge completes
+      await Future.delayed(Duration(seconds: 5));
+
+      // Check if we're still on a Cloudflare challenge page
+      final title = await page.title;
+      if (title?.contains('Just a moment') == true) {
+        print('Untappd: Still on Cloudflare challenge page, waiting longer...');
+        await Future.delayed(Duration(seconds: 10));
+      }
+
+      print('Untappd: Getting page content for $untappdUsername...');
+      // Get the HTML content after Cloudflare challenge is completed
+      final body = await page.content ?? '';
+
+      if (body.isEmpty) {
         throw Exception(
             'Failed to load Untappd page for user $untappdUsername');
       }
+
+      final webScraper = WebScraper();
+      webScraper.loadFromString(body);
 
       final checkins = webScraper.getElementAttribute(
           'div#main-stream > *', 'data-checkin-id');

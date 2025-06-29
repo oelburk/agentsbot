@@ -16,6 +16,7 @@ dependencies:
   web_scraper:
     git: https://github.com/oelburk/web_scraper.git
   sentry: ^9.0.0
+  puppeteer: ^3.18.0
 
 dev_dependencies:
   lints: ^5.1.1
