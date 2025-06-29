@@ -96,9 +96,12 @@ class BeerizerModule extends BotModule {
       beerString = 'Woho! New beers are releasing today! :beers:\n\n';
     }
     for (var beer in beers) {
+      final rating =
+          beer.untappdRating == 'N/A' ? 'N/A' : '${beer.untappdRating} :star:';
+
       beerString += '**${beer.name}**\n'
           '${beer.brewery}\n'
-          '<:untappd:1333124979386220604> ${beer.untappdRating} :star:\n'
+          '<:untappd:1333124979386220604> $rating\n'
           '*${beer.style}*\n'
           '\n';
     }

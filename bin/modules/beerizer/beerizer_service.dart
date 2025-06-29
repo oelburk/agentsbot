@@ -308,7 +308,12 @@ class BeerizerService {
 
   String _cleanUpUntappdRating(String rating) {
     try {
-      if (rating.length < 5) return 'N/A';
+      if (rating.length < 5 ||
+          rating.contains('Missi') ||
+          rating.contains('?') ||
+          rating.contains('N/A')) {
+        return 'N/A';
+      }
       return rating.trim().substring(0, 5).trim();
     } catch (e) {
       e.recordError(
